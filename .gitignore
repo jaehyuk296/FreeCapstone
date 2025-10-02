@@ -1,0 +1,11 @@
+# Python 가상환경 폴더 (필수!)
+# 운영체제에 따라 이름이 다를 수 있으니 모두 적어두는 것이 좋습니다.
+.venv/
+venv/
+env/
+env.bak/
+ENV/
+ENV.bak/
+__pycache__/    
+
+paneldata/
