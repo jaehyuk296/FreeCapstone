@@ -2,7 +2,7 @@
 패널 추출하는 단계까지 프로그램 만들기
 
 ## 가상환경
-.\venv\Scripts\activate
+. venv/Scripts/activate
 
 # '패널 추출' 완성을 위한 4단계 핵심 과제
 ## 1단계: 데이터 정제 및 표준화 ⚙️
