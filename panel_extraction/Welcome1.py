@@ -1,0 +1,39 @@
+import pandas as pd
+
+# --- 1단계: 어떤 조건으로 필터링할지 변수로 정의 ---
+target_gender = 'M'
+target_age_start = 40
+target_age_end = 49
+target_city = '부산광역시'
+target_district = '해운대구'
+
+
+# 실제 데이터 파일을 불러옵니다.
+df = pd.read_excel('../paneldata/Welcome/Welcome_1st.xlsx')
+
+# 1. 성별 조건
+condition_gender = df['Q10'] == target_gender
+
+# 2. 나이 조건
+current_year = 2025
+age = current_year - df['Q11'] + 1
+condition_age = (age >= target_age_start) & (age <= target_age_end)
+
+# 3. 지역 조건
+condition_city = df['Q12_1'] == target_city
+condition_district = df['Q12_2'] == target_district
+
+# --- 모든 조건을 만족하는(&) 데이터만 추출 ---
+extracted_panel_df = df[condition_gender & condition_age & condition_city & condition_district]
+
+print(f"--- {target_city} {target_district} {target_age_start}대 {target_gender} 패널 추출 결과 ---")
+print(f"총 {len(extracted_panel_df)}명")
+
+
+# --- 2단계: f-string을 이용해 동적으로 파일 이름 생성 ---
+output_filename = f"panel_{target_city}_{target_district}_{target_age_start}대_{target_gender}.json"
+
+# 추출된 패널을 동적으로 생성된 파일 이름으로 저장
+extracted_panel_df.to_json(output_filename, orient='records', indent=4, force_ascii=False)
+
+print(f"\n 추출된 패널이 '{output_filename}' 파일로 저장되었습니다.")
