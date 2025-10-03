@@ -8,4 +8,6 @@ ENV/
 ENV.bak/
 __pycache__/    
 
+# 개인정보 및 민감한 정보가 담긴 파일
 paneldata/
+json_extraction/
