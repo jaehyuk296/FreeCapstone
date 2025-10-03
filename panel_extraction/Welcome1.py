@@ -5,11 +5,11 @@ import os
 target_gender = 'M'
 target_age_start = 40
 target_age_end = 49
-target_city = '부산광역시'
-target_district = '해운대구'
+target_city = '서울'
+target_district = '성동구'
 
 # --- 저장하고 싶은 폴더 경로를 변수로 지정 ---
-output_folder = '../json_extraction/Welcome1_data/'
+output_folder = '../json_extraction/welcome1_data/' 
 
 # 실제 데이터 파일을 불러옵니다.
 df = pd.read_excel('../paneldata/Welcome/Welcome_1st.xlsx')
@@ -37,6 +37,10 @@ print(f"총 {len(extracted_panel_df)}명")
 output_filename = f"panel_{target_city}_{target_district}_{target_age_start}대_{target_gender}.json"
 
 # 추출된 패널을 동적으로 생성된 파일 이름으로 저장
-extracted_panel_df.to_json(output_filename, orient='records', indent=4, force_ascii=False)
+# 2. 폴더 경로와 파일 이름을 합쳐서 '전체 경로'를 만듭니다.
+full_path = os.path.join(output_folder, output_filename)
 
-print(f"\n 추출된 패널이 '{output_filename}' 파일로 저장되었습니다.")
+# 3. '전체 경로'에 파일을 저장합니다.
+extracted_panel_df.to_json(full_path, orient='records', indent=4, force_ascii=False)
+
+print(f"\n 추출된 패널이 '{full_path}' 경로에 성공적으로 저장되었습니다.")
