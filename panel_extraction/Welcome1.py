@@ -1,12 +1,15 @@
 import pandas as pd
+import os
 
-# --- 1단계: 어떤 조건으로 필터링할지 변수로 정의 ---
+# --- 어떤 조건으로 필터링할지 변수로 정의 ---
 target_gender = 'M'
 target_age_start = 40
 target_age_end = 49
 target_city = '부산광역시'
 target_district = '해운대구'
 
+# --- 저장하고 싶은 폴더 경로를 변수로 지정 ---
+output_folder = '../json_extraction/Welcome1_data/'
 
 # 실제 데이터 파일을 불러옵니다.
 df = pd.read_excel('../paneldata/Welcome/Welcome_1st.xlsx')
