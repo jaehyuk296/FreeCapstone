@@ -4,19 +4,32 @@
 # 디렉터리
 Root : 
 FreeCapstione
+
 ㄴ json_extraction (패널 추출한거 저장)
+
     ㄴ qpoll_data
+
     ㄴ welcome1_data
+    
     ㄴ welcome2_data
+
 ㄴ panel_extraction (코드 작성)
     ㄴ qpoll_data
+
         ㄴ 파이썬 코드
+
     ㄴ welcome_data
+
         ㄴ 파이썬 코드
+
 ㄴ paneldata (데이터 저장 장소)
+
     ㄴ Quickpoll
+
         ㄴ 엑셀 데이터
+
     ㄴ Welcome
+
         ㄴ 엑셀 데이터
 
 # '패널 추출' 완성을 위한 4단계 핵심 과제
