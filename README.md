@@ -10,10 +10,11 @@ FreeCapstione
     ㄴ qpoll_data
 
     ㄴ welcome1_data
-    
+
     ㄴ welcome2_data
 
 ㄴ panel_extraction (코드 작성)
+
     ㄴ qpoll_data
 
         ㄴ 파이썬 코드
