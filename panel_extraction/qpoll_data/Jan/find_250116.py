@@ -5,7 +5,7 @@ import os
 # --- 1. 파일 읽기 ---
 try:
     # 새로운 데이터 파일 경로로 수정
-    df = pd.read_excel('../../paneldata/Quickpoll/qpoll_join_250116.xlsx', skiprows=1)
+    df = pd.read_excel('../../../paneldata/Quickpoll/qpoll_join_250116.xlsx', skiprows=1)
     df.columns = df.columns.str.strip()
 except Exception as e:
     print(f"❌ 파일 읽기 중 에러 발생: {e}")
@@ -46,7 +46,7 @@ existing_final_columns = [col for col in final_columns if col in df.columns]
 final_df = df[existing_final_columns].copy()
 
 # --- 6. 최종 JSON 저장 ---
-output_folder = '../../json_extraction/qpoll_data/'
+output_folder = '../../../json_extraction/qpoll_data/Jan/'
 output_filename = '250116_preprocessed_data.json'
 os.makedirs(output_folder, exist_ok=True)
 json_full_path = os.path.join(output_folder, output_filename)
@@ -75,7 +75,7 @@ print("방문 빈도별 인원수:")
 print(frequency_counts)
 
 # --- 8. 통계 결과를 .txt 파일로 저장 ---
-stats_output_folder = '../../json_extraction/qpoll_data/summary/'
+stats_output_folder = '../../../json_extraction/qpoll_data/Jan/summary/'
 stats_output_filename = '250116_summary_stats.txt'
 os.makedirs(stats_output_folder, exist_ok=True)
 stats_full_path = os.path.join(stats_output_folder, stats_output_filename)

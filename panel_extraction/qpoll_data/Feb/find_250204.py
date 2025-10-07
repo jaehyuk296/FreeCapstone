@@ -3,8 +3,8 @@ import numpy as np
 import os
 
 # --- 1. 파일 경로 및 ID 설정 ---
-FILE_ID = '250224' # 새로운 파일 ID로 변경
-filepath = f'../../paneldata/Quickpoll/qpoll_join_{FILE_ID}.xlsx'
+FILE_ID = '250204' # 새로운 파일 ID로 변경
+filepath = f'../../../paneldata/Quickpoll/qpoll_join_{FILE_ID}.xlsx'
 
 # --- 2. 파일 읽기 ---
 try:
@@ -17,13 +17,15 @@ except Exception as e:
     print(f"❌ 파일 읽기 중 에러 발생: {e}")
     exit()
 
-# --- 3. 데이터 전처리 ('기분 좋아지는 소비' 맞춤 - 복수 응답 처리) ---
+# --- 3. 데이터 전처리 ('겨울방학 추억' 맞춤 - 복수 응답 처리) ---
 option_map = {
-    '1': '맛있는 음식 먹기',
-    '2': '여행 가기',
-    '3': '옷/패션관련 제품 구매',
-    '4': '취미관련 제품 구매',
-    '5': '기타'
+    '1': '가족과 함께 떠난 여행',
+    '2': '겨울방학 숙제를 하던 순간',
+    '3': '방학 동안 다녔던 학원이나 특별 활동',
+    '4': '친구들과 보낸 즐거운 시간',
+    '5': '눈썰매, 스키 등 겨울 스포츠',
+    '6': '눈사람 만들기',
+    '7': '기타'
 }
 
 # 원-핫 인코딩 수행
@@ -35,34 +37,34 @@ dummies = dummies.rename(columns=option_map)
 # 원래 데이터프레임에 새로 만든 컬럼들을 합치기 (원본 '문항1'은 삭제)
 df = pd.concat([df.drop('문항1', axis=1), dummies], axis=1)
 
-# 선택한 모든 소비 유형을 하나의 문자열로 합치는 함수
-def get_all_consumptions(row):
-    consumptions = []
+# 선택한 모든 활동을 하나의 문자열로 합치는 함수
+def get_all_memories(row):
+    memories = []
     for option_text in option_map.values():
         if option_text in row and row[option_text] == 1:
-            consumptions.append(option_text)
-    return ', '.join(sorted(consumptions)) if consumptions else '선택 없음'
+            memories.append(option_text)
+    return ', '.join(sorted(memories)) if memories else '선택 없음'
 
-# '기분_좋아지는_소비_요약' 열 생성
-df['기분_좋아지는_소비_요약'] = df.apply(get_all_consumptions, axis=1)
+# '기억에_남는_일' 열 생성
+df['기억에_남는_일'] = df.apply(get_all_memories, axis=1)
 
 # '설문일시' 열을 datetime 형식으로 변환
 df['설문일시'] = pd.to_datetime(df['설문일시'], errors='coerce')
 
-print("🛍️ '기분 좋아지는 소비' 데이터 처리 완료.")
+print("思い出 '겨울방학 추억' 데이터 처리 완료.")
 
 
 # --- 4. 최종 컬럼 선택 ---
 final_columns = [
     '구분', '고유번호', '성별', '나이', '지역', '설문일시',
-    '기분_좋아지는_소비_요약'
+    '기억에_남는_일'
 ] + list(option_map.values()) # 원-핫 인코딩된 컬럼들도 추가
 
 existing_final_columns = [col for col in final_columns if col in df.columns]
 final_df = df[existing_final_columns].copy()
 
 # --- 5. 최종 JSON 저장 ---
-output_folder = '../../json_extraction/qpoll_data/'
+output_folder = '../../../json_extraction/qpoll_data/Feb/'
 output_filename = f'{FILE_ID}_preprocessed_data.json'
 os.makedirs(output_folder, exist_ok=True)
 json_full_path = os.path.join(output_folder, output_filename)
@@ -92,16 +94,15 @@ if existing_options:
     print(individual_counts)
     print("-" * 30)
 
-
 # --- 7. 통계 결과를 .txt 파일로 저장 ---
-stats_output_folder = '../../json_extraction/qpoll_data/summary/'
+stats_output_folder = '../../../json_extraction/qpoll_data/Feb/summary/'
 stats_output_filename = f'{FILE_ID}_summary_stats.txt'
 os.makedirs(stats_output_folder, exist_ok=True)
 stats_full_path = os.path.join(stats_output_folder, stats_output_filename)
 
 try:
     with open(stats_full_path, 'w', encoding='utf-8') as f:
-        f.write(f"📊 {FILE_ID} 기분 좋아지는 소비 요약 통계\n")
+        f.write(f"📊 {FILE_ID} 겨울방학 추억 요약 통계\n")
         f.write("-" * 30 + "\n")
         f.write(f"실제 참여자 인원수: {total_people}명\n")
         f.write("-" * 30 + "\n\n")

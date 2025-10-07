@@ -6,7 +6,7 @@ import os
 try:
     # skiprows=1 옵션: 엑셀 파일의 맨 위 1줄(질문)을 건너뛰고 데이터를 읽어옵니다.
     # 이렇게 하면 2번째 줄이 자동으로 컬럼 이름(헤더)으로 지정됩니다.
-    df = pd.read_excel('../../paneldata/Quickpoll/qpoll_join_250107.xlsx', skiprows=1)
+    df = pd.read_excel('../../../paneldata/Quickpoll/qpoll_join_250107.xlsx', skiprows=1)
     
     # 만약을 위해 컬럼 이름의 앞뒤 공백을 제거합니다.
     df.columns = df.columns.str.strip()
@@ -52,7 +52,7 @@ existing_final_columns = [col for col in final_columns if col in df.columns]
 final_df = df[existing_final_columns].copy()
 
 # --- 8. 최종 JSON 저장 ---
-output_folder = '../../json_extraction/qpoll_data/'
+output_folder = '../../../json_extraction/qpoll_data/Jan/'
 output_filename = '250107_preprocessed_data.json'
 os.makedirs(output_folder, exist_ok=True)
 json_full_path = os.path.join(output_folder, output_filename)
@@ -86,7 +86,7 @@ if existing_options:
     print("-" * 30)
 
 # --- 10. 통계 결과를 .txt 파일로 저장 ---
-stats_output_folder = '../../json_extraction/qpoll_data/summary/'
+stats_output_folder = '../../../json_extraction/qpoll_data/Jan/summary/'
 stats_output_filename = '250107_summary_stats.txt'
 os.makedirs(stats_output_folder, exist_ok=True)
 stats_full_path = os.path.join(stats_output_folder, stats_output_filename)
