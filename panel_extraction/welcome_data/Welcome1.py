@@ -12,7 +12,7 @@ target_district = '성동구'
 output_folder = '../../json_extraction/welcome1_data/' 
 
 # 실제 데이터 파일을 불러옵니다.
-df = pd.read_excel('../paneldata/Welcome/Welcome_1st.xlsx')
+df = pd.read_excel('../../paneldata/Welcome/Welcome_1st.xlsx')
 
 # 1. 성별 조건
 condition_gender = df['Q10'] == target_gender
