@@ -23,7 +23,7 @@ print(f"전체 인원수: {total_people}명")
 print("-" * 30)
 
 # --- 4. 특정 열의 데이터 값 개수 계산 및 이름 순으로 정렬하여 출력 ---
-target_column = 'Q11_2'
+target_column = 'Q11'
 
 if target_column in df.columns:
     # --- ✨ 에러 수정 부분 ✨ ---
