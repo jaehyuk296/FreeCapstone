@@ -2,10 +2,10 @@
 # 운영체제에 따라 이름이 다를 수 있으니 모두 적어두는 것이 좋습니다.
 .venv/
 venv/
-.env
+.env/
 env/
 env.bak/
-ENV/
+ENV/git 
 ENV.bak/
 __pycache__/    
 
