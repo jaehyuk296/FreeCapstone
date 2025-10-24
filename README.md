@@ -1,6 +1,9 @@
 # FreeCapstone
 패널 추출하는 단계까지 프로그램 만들기
 
+# 라이브러리 설치
+pip install python-dotenv
+
 # 디렉터리
 Root : 
 FreeCapstione
