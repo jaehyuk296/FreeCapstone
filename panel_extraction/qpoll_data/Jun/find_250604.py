@@ -37,7 +37,6 @@ df['여름철_걱정거리'] = df['문항1'].map(option_map)
 # '걱정있음' 열 생성: 걱정이 있으면 1, 없으면 0
 df['걱정있음'] = (df['여름철_걱정거리'] != '특별히 걱정되는 것이 없다').astype(int)
 
-
 # '설문일시' 열을 datetime 형식으로 변환
 df['설문일시'] = pd.to_datetime(df['설문일시'], errors='coerce')
 
