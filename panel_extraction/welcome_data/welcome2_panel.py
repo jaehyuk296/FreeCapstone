@@ -580,6 +580,7 @@ df['월평균_개인소득'] = df['월평균_개인소득_코드'].map(option_ma
 df['월평균_가구소득'] = df['월평균_가구소득_코드'].map(option_map_q7)
 df['보유휴대폰단말기_브랜드'] = df['보유휴대폰단말기_브랜드_코드'].map(option_map_q9_1)
 df['보유휴대폰모델명'] = df['보유휴대폰모델명_코드'].map(option_map_q9_2)
+df['보유차량여부'] = df['보유차량여부_코드'].map(option_map_q10)
 df['자동차제조사'] = df['자동차제조사_코드'].map(option_map_q11_1)
 df['자동차모델'] = df['자동차모델_코드'].map(option_map_q11_2)
 
