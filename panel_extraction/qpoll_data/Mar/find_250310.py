@@ -17,7 +17,7 @@ except Exception as e:
     print(f"❌ 파일 읽기 중 에러 발생: {e}")
     exit()
 
-# --- 3. 데이터 전처리 ('스킨케어' 맞춤) ---
+# --- 3. 코드북 정의 ---
 
 # '문항1' (피부 만족도)에 대한 코드북
 option_map_q1 = {
@@ -37,16 +37,22 @@ option_map_q3 = {
     4: '가격', 5: '패키지 디자인', 6: '친환경/비건 제품 여부', 7: '기타'
 }
 
-# '문항1'에 대한 원-핫 인코딩 수행 (복수 응답 처리)
+# --- 4. 데이터 전처리 (★★★ 수정된 부분 ★★★) ---
+
+# 4-1. '문항1' (피부 만족도) - 중복 응답 처리 (원래 로직 복원)
+# .explode() : '1,4' -> '1'과 '4'로 행 분리
+# .get_dummies() : '1', '4'를 원-핫 인코딩
+# .groupby(level=0).sum() : 분리된 행을 다시 합쳐서 '1'과 '4'가 모두 1이 되게 함
 dummies_q1 = (df['문항1'].astype(str).str.replace(' ', '')
-              .str.split(',').explode()
-              .str.strip()
-              .str.get_dummies()
-              .groupby(level=0).sum())
+                   .str.split(',').explode()
+                   .str.strip()
+                   .str.get_dummies()
+                   .groupby(level=0).sum())
 dummies_q1 = dummies_q1.rename(columns=option_map_q1)
+# 원-핫 인코딩된 통계용 컬럼들을 df에 합침
 df = pd.concat([df, dummies_q1], axis=1)
 
-# 선택한 모든 만족도를 하나의 문자열로 합치는 함수
+# '문항1' 요약 함수 (중복 답변 시 "불만족한다, 매우 불만족한다" 등으로 요약)
 def get_all_satisfactions(row):
     satisfactions = []
     for option_text in option_map_q1.values():
@@ -56,25 +62,27 @@ def get_all_satisfactions(row):
 df['피부만족도_요약'] = df.apply(get_all_satisfactions, axis=1)
 
 
-# '문항2', '문항3'을 각각 숫자형으로 변환 (단일 응답 처리)
-df['문항2'] = pd.to_numeric(df['문항2'], errors='coerce')
-df['문항3'] = pd.to_numeric(df['문항3'], errors='coerce')
+# 4-2. '문항2', '문항3' (단일 응답) - .map()으로 처리
+df['스킨케어_한달_소비금액'] = pd.to_numeric(df['문항2'], errors='coerce').map(option_map_q2).fillna('선택 없음')
+df['구매_고려_요소'] = pd.to_numeric(df['문항3'], errors='coerce').map(option_map_q3).fillna('선택 없음')
 
-# 단일 선택 문항에 대한 새로운 텍스트 열 생성
-df['스킨케어_소비금액'] = df['문항2'].map(option_map_q2)
-df['구매_고려_요소'] = df['문항3'].map(option_map_q3)
-
-# '설문일시' 열을 datetime 형식으로 변환
+# 4-3. 공통 처리
 df['설문일시'] = pd.to_datetime(df['설문일시'], errors='coerce')
+df = df.drop(columns=['문항1', '문항2', '문항3'], errors='ignore') # 원본 문항 컬럼 삭제
 
-# --- 4. 더 이상 필요 없는 원본 문항 컬럼 삭제 ---
-df = df.drop(columns=['문항1', '문항2', '문항3'], errors='ignore')
-
-print("💅 '스킨케어' 데이터 처리 완료.")
+print("💅 '스킨케어' 데이터 처리 완료 (문항1 중복 처리됨).")
 
 
-# --- 5. 최종 데이터프레임 생성 ---
-final_df = df.copy()
+# --- 5. 최종 컬럼 선택 (JSON 저장용) ---
+# 원하시는 요약 컬럼만 정확히 선택합니다.
+final_columns = [
+    '구분', '고유번호', '성별', '나이', '지역', '설문일시',
+    '피부만족도_요약',   # (중복 답변이 쉼표로 요약됨)
+    '스킨케어_한달_소비금액', 
+    '구매_고려_요소'
+]
+existing_final_columns = [col for col in final_columns if col in df.columns]
+json_df = df[existing_final_columns].copy()
 
 
 # --- 6. 최종 JSON 저장 ---
@@ -83,43 +91,42 @@ output_filename = f'{FILE_ID}_preprocessed_data.json'
 os.makedirs(output_folder, exist_ok=True)
 json_full_path = os.path.join(output_folder, output_filename)
 
-json_df = final_df.copy()
 json_df['설문일시'] = json_df['설문일시'].dt.strftime('%Y-%m-%d %I:%M:%S %p').fillna('')
 json_df.to_json(json_full_path, orient='records', indent=4, force_ascii=False)
 print(f"\n🎉 전처리가 완료된 전체 데이터가 '{json_full_path}' 경로에 JSON 파일로 저장되었습니다.")
 
 
-# --- 7. 요약 통계 생성 및 출력 ---
+# --- 7. 요약 통계 생성 및 출력 (★★★ 수정된 부분 ★★★) ---
+# 통계는 원-핫 인코딩된 원본 df를 사용합니다.
 print("\n" + "-"*30)
 print("📊 요약 통계")
 print("-" * 30)
 
-# 통계 내용을 담을 문자열 변수 생성
 stats_summary = []
-
-total_people = len(final_df)
+total_people = len(df) # json_df가 아닌 원본 df 사용
 stats_summary.append(f"실제 참여자 인원수: {total_people}명")
 stats_summary.append("-" * 30)
 
-# 피부 만족도 통계 (복수 응답)
+# 피부 만족도 통계 (중복 응답 처리)
 satisfaction_options = list(option_map_q1.values())
-existing_satisfactions = [opt for opt in satisfaction_options if opt in final_df.columns]
+existing_satisfactions = [opt for opt in satisfaction_options if opt in df.columns]
 if existing_satisfactions:
-    satisfaction_counts = final_df[existing_satisfactions].sum().sort_values(ascending=False)
+    # 원-핫 인코딩된 컬럼을 sum()하여 중복 응답 집계
+    satisfaction_counts = df[existing_satisfactions].sum().sort_values(ascending=False)
     stats_summary.append("피부 만족도별 인원수 (중복 응답):")
     stats_summary.append(satisfaction_counts.to_string())
     stats_summary.append("-" * 30)
 
-# 스킨케어 소비금액 통계
-if '스킨케어_소비금액' in final_df.columns:
-    spending_counts = final_df['스킨케어_소비금액'].value_counts()
+# 스킨케어 소비금액 통계 (단일 응답)
+if '스킨케어_한달_소비금액' in df.columns:
+    spending_counts = df['스킨케어_한달_소비금액'].value_counts()
     stats_summary.append("스킨케어 소비금액별 인원수:")
     stats_summary.append(spending_counts.to_string())
     stats_summary.append("-" * 30)
 
-# 구매 고려 요소 통계
-if '구매_고려_요소' in final_df.columns:
-    factor_counts = final_df['구매_고려_요소'].value_counts()
+# 구매 고려 요소 통계 (단일 응답)
+if '구매_고려_요소' in df.columns:
+    factor_counts = df['구매_고려_요소'].value_counts()
     stats_summary.append("구매 고려 요소별 인원수:")
     stats_summary.append(factor_counts.to_string())
 
@@ -143,9 +150,8 @@ try:
     with open(stats_full_path, 'w', encoding='utf-8') as f:
         f.write(f"📊 {FILE_ID} 스킨케어 관련 요약 통계\n")
         f.write("-" * 30 + "\n")
-        f.write(final_stats_string) # 화면에 출력한 통계 문자열을 그대로 파일에 씀
+        f.write(final_stats_string) 
 
     print(f"\n📈 요약 통계가 '{stats_full_path}' 경로에 저장되었습니다.")
 except Exception as e:
     print(f"❌ 통계 파일 저장 중 에러 발생: {e}")
-
