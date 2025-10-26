@@ -30,7 +30,8 @@ df['문항1'] = pd.to_numeric(df['문항1'], errors='coerce')
 df['선호선물'] = df['문항1'].map(option_map)
 
 # '선호선물있음' 열 생성: '선호하는 선물 없음'이 아니면 1, 맞으면 0
-df['선호선물있음'] = (df['선호선물'] != '선호하는 선물 없음').astype(int)
+df['설 선호선물있음'] = (df['선호선물'] != '선호하는 선물 없음').astype(int)
+df['설 선호선물있음'] = df['설 선호선물있음'].map({1: '있다', 0: '없다'})
 
 # '설문일시' 열을 datetime 형식으로 변환
 df['설문일시'] = pd.to_datetime(df['설문일시'], errors='coerce')
@@ -41,7 +42,7 @@ print("🎁 '설 선물' 데이터 처리 완료.")
 # --- 4. 최종 컬럼 선택 ---
 final_columns = [
     '구분', '고유번호', '성별', '나이', '지역', '설문일시',
-    '선호선물', '선호선물있음'
+    '선호선물', '설 선호선물있음'
 ]
 existing_final_columns = [col for col in final_columns if col in df.columns]
 final_df = df[existing_final_columns].copy()
@@ -56,45 +57,3 @@ json_df = final_df.copy()
 json_df['설문일시'] = json_df['설문일시'].dt.strftime('%Y-%m-%d %I:%M:%S %p').fillna('')
 json_df.to_json(json_full_path, orient='records', indent=4, force_ascii=False)
 print(f"\n🎉 전처리가 완료된 전체 데이터가 '{json_full_path}' 경로에 JSON 파일로 저장되었습니다.")
-
-
-# --- 6. 요약 통계 출력 및 저장 ---
-print("\n" + "-"*30)
-print("📊 요약 통계")
-print("-" * 30)
-
-total_people = len(final_df)
-# '선호선물있음' 열의 합계를 구해 선호 선물이 있는 사람 수를 계산
-preference_havers = final_df['선호선물있음'].sum()
-preference_counts = final_df['선호선물'].value_counts()
-
-print(f"실제 참여자 인원수: {total_people}명")
-if total_people > 0:
-    print(f"선호 선물 있는 사람 수: {preference_havers}명")
-    print(f"선호 선물 있는 사람 비율: {preference_havers / total_people * 100:.2f}%")
-print("-" * 30)
-print("선호 선물별 인원수:")
-print(preference_counts)
-
-
-# --- 7. 통계 결과를 .txt 파일로 저장 ---
-stats_output_folder = '../../../json_extraction/qpoll_data/Jan/summary/'
-stats_output_filename = f'{FILE_ID}_summary_stats.txt'
-os.makedirs(stats_output_folder, exist_ok=True)
-stats_full_path = os.path.join(stats_output_folder, stats_output_filename)
-
-try:
-    with open(stats_full_path, 'w', encoding='utf-8') as f:
-        f.write(f"📊 {FILE_ID} 설 선물 선호도 요약 통계\n")
-        f.write("-" * 30 + "\n")
-        f.write(f"실제 참여자 인원수: {total_people}명\n")
-        if total_people > 0:
-            f.write(f"선호 선물 있는 사람 수: {preference_havers}명\n")
-            f.write(f"선호 선물 있는 사람 비율: {preference_havers / total_people * 100:.2f}%\n")
-        f.write("-" * 30 + "\n\n")
-        f.write("선호 선물별 인원수:\n")
-        f.write(preference_counts.to_string())
-    print(f"\n📈 요약 통계가 '{stats_full_path}' 경로에 저장되었습니다.")
-except Exception as e:
-    print(f"❌ 통계 파일 저장 중 에러 발생: {e}")
-
