@@ -56,7 +56,7 @@ print("🛍️ '기분 좋아지는 소비' 데이터 처리 완료.")
 final_columns = [
     '구분', '고유번호', '성별', '나이', '지역', '설문일시',
     '기분_좋아지는_소비_요약'
-] + list(option_map.values()) # 원-핫 인코딩된 컬럼들도 추가
+]
 
 existing_final_columns = [col for col in final_columns if col in df.columns]
 final_df = df[existing_final_columns].copy()
@@ -71,44 +71,3 @@ json_df = final_df.copy()
 json_df['설문일시'] = json_df['설문일시'].dt.strftime('%Y-%m-%d %I:%M:%S %p').fillna('')
 json_df.to_json(json_full_path, orient='records', indent=4, force_ascii=False)
 print(f"\n🎉 전처리가 완료된 전체 데이터가 '{json_full_path}' 경로에 JSON 파일로 저장되었습니다.")
-
-
-# --- 6. 요약 통계 출력 및 저장 ---
-print("\n" + "-"*30)
-print("📊 요약 통계")
-print("-" * 30)
-
-total_people = len(final_df)
-print(f"실제 참여자 인원수: {total_people}명")
-print("-" * 30)
-
-# 각 보기별 응답 인원수 계산
-individual_options = list(option_map.values())
-existing_options = [opt for opt in individual_options if opt in final_df.columns]
-
-if existing_options:
-    individual_counts = final_df[existing_options].sum().sort_values(ascending=False)
-    print("각 보기별 응답 인원수:")
-    print(individual_counts)
-    print("-" * 30)
-
-
-# --- 7. 통계 결과를 .txt 파일로 저장 ---
-stats_output_folder = '../../../json_extraction/qpoll_data/Feb/summary/'
-stats_output_filename = f'{FILE_ID}_summary_stats.txt'
-os.makedirs(stats_output_folder, exist_ok=True)
-stats_full_path = os.path.join(stats_output_folder, stats_output_filename)
-
-try:
-    with open(stats_full_path, 'w', encoding='utf-8') as f:
-        f.write(f"📊 {FILE_ID} 기분 좋아지는 소비 요약 통계\n")
-        f.write("-" * 30 + "\n")
-        f.write(f"실제 참여자 인원수: {total_people}명\n")
-        f.write("-" * 30 + "\n\n")
-        if existing_options:
-            f.write("각 보기별 응답 인원수:\n")
-            f.write(individual_counts.to_string())
-    print(f"\n📈 요약 통계가 '{stats_full_path}' 경로에 저장되었습니다.")
-except Exception as e:
-    print(f"❌ 통계 파일 저장 중 에러 발생: {e}")
-
