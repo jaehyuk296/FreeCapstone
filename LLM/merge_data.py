@@ -168,7 +168,6 @@ else:
 
 print("-" * 30)
 
-
 # --- 4. 최종 데이터 확인 및 저장 ---
 if not df_merged.empty:
     print("--- 최종 통합 데이터 (df_merged) ---")
@@ -180,14 +179,60 @@ if not df_merged.empty:
             df_merged = df_merged.drop_duplicates(subset='고유번호', keep='first')
             print(f"   ✅ 최종 중복 제거 후 Shape: {df_merged.shape}")
 
-        print("   데이터 앞 5줄 미리보기:")
+        # (★★★ 수정된 부분: 컬럼 이름에서 날짜 ID 제거 ★★★)
+        print("\n   --- 컬럼 이름 정리 시작 (날짜 ID 제거) ---")
+        cleaned_columns = {}
+        processed_names = set() # 이미 처리된 최종 이름 추적 (중복 방지)
+        
+        for col in df_merged.columns:
+            original_col = col # 원래 컬럼 이름 저장
+            
+            # 컬럼 이름 마지막 부분이 '_YYMMDD' 형태인지 확인
+            if len(col) > 7 and col[-7] == '_' and col[-6:].isdigit():
+                # '_' 앞부분까지만 잘라서 기본 이름으로 사용
+                base_name = col.rsplit('_', 1)[0]
+                
+                # --- 중복 이름 처리 ---
+                # 만약 정리된 이름(base_name)이 이미 최종 컬럼명으로 사용되었다면,
+                # 현재 컬럼 이름에 '_dup' 같은 접미사를 붙여 구분합니다.
+                # (또는 다른 규칙 적용 가능: 예: '_dup2', '_dup3'...)
+                final_name = base_name
+                counter = 1
+                while final_name in processed_names:
+                    counter += 1
+                    final_name = f"{base_name}_dup{counter}"
+                    
+                cleaned_columns[original_col] = final_name
+                processed_names.add(final_name)
+                if original_col != final_name:
+                     print(f"     '{original_col}'  ->  '{final_name}' (날짜 제거)")
+                
+            else:
+                # 패턴에 맞지 않으면 원래 이름 유지 (단, 중복 방지 체크는 필요)
+                final_name = col
+                counter = 1
+                while final_name in processed_names:
+                    counter += 1
+                    final_name = f"{col}_dup{counter}"
+
+                cleaned_columns[original_col] = final_name
+                processed_names.add(final_name)
+                if original_col != final_name:
+                     print(f"     '{original_col}'  ->  '{final_name}' (중복 방지)")
+
+        df_merged.rename(columns=cleaned_columns, inplace=True)
+        print(f"   ✅ 컬럼 이름 정리 완료. (현재 컬럼 수: {len(df_merged.columns)})")
+        # (★★★ 여기까지 수정 ★★★)
+
+        print("\n   데이터 앞 5줄 미리보기:")
         print(df_merged.head())
         print(f"\n   최종 데이터 Shape: {df_merged.shape}")
         
     except Exception as e:
-        print(f"   ❌ [오류] 최종 데이터 출력 중 오류 발생: {e}")
+        print(f"   ❌ [오류] 최종 데이터 출력 또는 컬럼 정리 중 오류 발생: {e}")
     print("-" * 30)
 
+    # --- 이하 저장 로직은 동일 ---
     output_path = base_dir / 'merged_panel_data.json'
     try:
         df_merged_for_json = df_merged.replace({np.nan: None})
