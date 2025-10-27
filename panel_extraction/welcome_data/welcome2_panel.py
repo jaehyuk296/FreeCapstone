@@ -570,71 +570,188 @@ option_map_q13 = {
 }
 
 # 3-3. 각 문항별 전처리
-# 단일 선택 문항 처리
-df['결혼여부'] = df['결혼여부_코드'].map(option_map_q1)
-df['가족수'] = df['가족수_코드'].map(option_map_q3)
-df['최종학력'] = df['최종학력_코드'].map(option_map_q4)
-df['직업'] = df['직업_코드'].map(option_map_q5)
-df['직무'] = df['직무_코드'].map(option_map_q5_1)
-df['월평균_개인소득'] = df['월평균_개인소득_코드'].map(option_map_q6)
-df['월평균_가구소득'] = df['월평균_가구소득_코드'].map(option_map_q7)
-df['보유휴대폰단말기_브랜드'] = df['보유휴대폰단말기_브랜드_코드'].map(option_map_q9_1)
-df['보유휴대폰모델명'] = df['보유휴대폰모델명_코드'].map(option_map_q9_2)
-df['보유차량여부'] = df['보유차량여부_코드'].map(option_map_q10)
-df['자동차제조사'] = df['자동차제조사_코드'].map(option_map_q11_1)
-df['자동차모델'] = df['자동차모델_코드'].map(option_map_q11_2)
+# 단일 선택 문항 처리 (텍스트 요약 컬럼 생성)
+def map_single_choice_with_text(series, option_map):
+    """
+    단일 선택 컬럼을 매핑하는 함수 (텍스트 답변 처리 포함)
+    - series: 처리할 pandas Series (예: df['직업_코드'])
+    - option_map: 해당 컬럼의 코드북 (딕셔너리)
+    """
+    def get_value(x):
+        if pd.isna(x) or str(x).strip() == '':
+            return '선택 없음'
+        
+        # 숫자 코드로 변환 시도
+        try:
+            numeric_code = int(float(str(x))) # 소수점 있는 숫자도 처리
+            # 코드북에 숫자가 있으면 매핑된 텍스트 반환
+            if numeric_code in option_map:
+                return option_map[numeric_code]
+            # 코드북에 없는 숫자면 원본 반환 (숫자 형태로 입력된 텍스트일 수 있음)
+            else:
+                 return str(x).strip() 
+        # 숫자 변환 실패 시 (원본이 텍스트일 경우)
+        except (ValueError, TypeError):
+             return str(x).strip() # 원본 텍스트 반환
+
+    return series.apply(get_value)
+
+# 개선된 함수를 사용하여 단일 선택 컬럼 처리
+df['결혼여부'] = map_single_choice_with_text(df['결혼여부_코드'], option_map_q1)
+df['가족수'] = map_single_choice_with_text(df['가족수_코드'], option_map_q3)
+df['최종학력'] = map_single_choice_with_text(df['최종학력_코드'], option_map_q4)
+df['직업'] = map_single_choice_with_text(df['직업_코드'], option_map_q5) # '아르바이트' 처리
+df['직무'] = map_single_choice_with_text(df['직무_코드'], option_map_q5_1)
+df['월평균_개인소득'] = map_single_choice_with_text(df['월평균_개인소득_코드'], option_map_q6)
+df['월평균_가구소득'] = map_single_choice_with_text(df['월평균_가구소득_코드'], option_map_q7)
+df['보유휴대폰단말기_브랜드'] = map_single_choice_with_text(df['보유휴대폰단말기_브랜드_코드'], option_map_q9_1) # 텍스트 처리
+df['보유휴대폰모델명'] = map_single_choice_with_text(df['보유휴대폰모델명_코드'], option_map_q9_2) # 텍스트 처리
+df['보유차량여부'] = map_single_choice_with_text(df['보유차량여부_코드'], option_map_q10)
+df['자동차제조사'] = map_single_choice_with_text(df['자동차제조사_코드'], option_map_q11_1) # 텍스트 처리
+df['자동차모델'] = map_single_choice_with_text(df['자동차모델_코드'], option_map_q11_2)
 
 # 자녀수 처리
-df['자녀수'] = pd.to_numeric(df['자녀수_코드'], errors='coerce').fillna(0)
-df['자녀유무'] = (df['자녀수'] > 0).astype(int)
+df['자녀수'] = pd.to_numeric(df['자녀수_코드'], errors='coerce').fillna(0).astype(int)
+df['자녀유무'] = np.where(df['자녀수'] > 0, '있음', '없음')
 
 # 보유전자제품 (복수 응답) 처리
-def process_multi_choice(df, column_code, option_map, prefix):
-    """복수 응답 컬럼을 전처리하는 함수"""
-    # NaN 값을 빈 문자열로 대체
-    df[column_code] = df[column_code].fillna('')
-    # 코드값을 문자열로 변환
-    s = df[column_code].astype(str).str.replace(' ', '')
-    # get_dummies
-    dummies = s.str.get_dummies(sep=',')
+def get_multi_choice_summary(row, column_code, option_map, 
+                             special_value_map=None, 
+                             etc_code=None, etc_text_column=None):
+    """
+    범용 복수 응답 요약 함수 (기타 텍스트 처리 추가)
+    """
+    raw_response = str(row.get(column_code, '')).strip().replace(' ', '')
+    if not raw_response or raw_response == 'nan':
+        return '선택 없음'
+
+    codes = raw_response.split(',')
+    summary_list = []
     
-    # option_map의 key도 문자열로 변환하여 매핑
+    # 문자열 키로 변환된 option_map
     str_key_map = {str(k): v for k, v in option_map.items()}
     
-    # 컬럼 이름 변경
-    dummies = dummies.rename(columns=str_key_map)
+    # 1. 특별(단독) 응답 우선 처리
+    if special_value_map:
+        for code in codes:
+            # 특별 응답 코드(숫자)를 문자열로 변환하여 비교
+            if code in {str(k) for k in special_value_map.keys()}: 
+                try:
+                    # special_value_map의 키(숫자)로 값을 찾음
+                    numeric_code = int(code)
+                    if numeric_code in special_value_map:
+                       return special_value_map[numeric_code]
+                except ValueError:
+                    pass # 숫자로 변환 안되면 무시하고 다음으로
+
+    # 2. 일반 응답 처리
+    for code in codes:
+        # 2-1. '기타' 코드 처리
+        if etc_code and code == str(etc_code):
+            etc_text = row.get(etc_text_column) if etc_text_column else None
+            # 기타 텍스트가 존재하고 비어있지 않으면 텍스트를 추가
+            if etc_text_column and pd.notna(etc_text) and str(etc_text).strip():
+                summary_list.append(str(etc_text).strip())
+            # 기타 텍스트가 없으면, option_map에 정의된 '기타' 텍스트 추가 (예: '기타 브랜드')
+            elif str(etc_code) in str_key_map:
+                summary_list.append(str_key_map[str(etc_code)])
+            # 둘 다 없으면 그냥 '기타'
+            else:
+                 summary_list.append('기타')
+        # 2-2. '기타' 외 일반 코드 처리
+        elif code in str_key_map:
+            summary_list.append(str_key_map[code])
+            
+    if summary_list:
+        # 중복 제거 및 정렬 후 반환
+        return ', '.join(sorted(list(set(summary_list)))) 
+    else:
+        return '선택 없음'
     
-    # 기존 컬럼 이름과 겹치지 않게 prefix 추가
-    dummies.columns = [f"{prefix}_{col}" for col in dummies.columns]
-    
-    return dummies
+# --- Q8 (보유전자제품) 요약 ---
+df['보유전자제품_요약'] = df.apply(
+    get_multi_choice_summary, 
+    axis=1, 
+    column_code='보유전자제품_코드', 
+    option_map=option_map_q8
+)
 
-# Q8 (보유전자제품) 처리
-dummies_q8 = process_multi_choice(df, '보유전자제품_코드', option_map_q8, '보유제품')
-df = pd.concat([df, dummies_q8], axis=1)
+# --- Q12 (흡연경험) 요약 ---
+df['흡연경험_요약'] = df.apply(
+    get_multi_choice_summary, 
+    axis=1, 
+    column_code='흡연경험_코드', 
+    option_map=option_map_q12,
+    special_value_map={'6': '담배를 피워본 적이 없다'} # 단독 응답 우선 처리
+)
 
-# Q12 (흡연경험) 처리
-dummies_q12 = process_multi_choice(df, '흡연경험_코드', option_map_q12, '흡연경험')
-df = pd.concat([df, dummies_q12], axis=1)
+# --- Q12_1 (흡연경험_담배브랜드) 요약 ---
+df['흡연경험_담배브랜드_요약'] = df.apply(
+    get_multi_choice_summary, 
+    axis=1, 
+    column_code='흡연경험_담배브랜드_코드', 
+    option_map=option_map_q12_1
+)
+# (기타 내용이 있다면 요약본에 합치기)
+df['흡연경험_담배브랜드_요약'] = df.apply(
+    lambda row: f"{row['흡연경험_담배브랜드_요약']}, {row['흡연경험_담배브랜드(기타브랜드)_코드']}" 
+    if pd.notna(row['흡연경험_담배브랜드(기타브랜드)_코드']) and '기타 브랜드' in row['흡연경험_담배브랜드_요약']
+    else row['흡연경험_담배브랜드_요약'],
+    axis=1
+)
 
-# Q12_1 (흡연경험_담배브랜드) 처리
-dummies_q12_1 = process_multi_choice(df, '흡연경험_담배브랜드_코드', option_map_q12_1, '경험브랜드')
-df = pd.concat([df, dummies_q12_1], axis=1)
 
-# Q12_2 (궐련형 전자담배 이용경험) 처리
-dummies_q12_2 = process_multi_choice(df, '궐련형 전자담배/가열식 전자담배 이용경험_코드', option_map_q12_2, '경험전자담배')
-df = pd.concat([df, dummies_q12_2], axis=1)
+# --- Q12_2 (궐련형 전자담배 이용경험) 요약 ---
+df['궐련형_전자담배_경험_요약'] = df.apply(
+    get_multi_choice_summary, 
+    axis=1, 
+    column_code='궐련형 전자담배/가열식 전자담배 이용경험_코드', 
+    option_map=option_map_q12_2
+)
+# (기타 내용이 있다면 요약본에 합치기)
+df['궐련형_전자담배_경험_요약'] = df.apply(
+    lambda row: f"{row['궐련형_전자담배_경험_요약']}, {row['흡연경험_담배_브랜드(기타내용)_코드']}" 
+    if pd.notna(row['흡연경험_담배_브랜드(기타내용)_코드']) and '기타 브랜드' in row['궐련형_전자담배_경험_요약']
+    else row['궐련형_전자담배_경험_요약'],
+    axis=1
+)
 
-# Q13 (음용경험_술) 처리
-dummies_q13 = process_multi_choice(df, '음용경험_술_코드', option_map_q13, '음용경험')
-df = pd.concat([df, dummies_q13], axis=1)
 
+# --- Q13 (음용경험_술) 요약 ---
+df['음용경험_술_요약'] = df.apply(
+    get_multi_choice_summary, 
+    axis=1, 
+    column_code='음용경험_술_코드', 
+    option_map=option_map_q13,
+    special_value_map={'10': '최근 1년 이내 술을 마시지 않음'} # 단독 응답 우선 처리
+)
+# (기타 내용이 있다면 요약본에 합치기)
+df['음용경험_술_요약'] = df.apply(
+    lambda row: f"{row['음용경험_술_요약']}, {row['음용경험_술(기타내용)_코드']}" 
+    if pd.notna(row['음용경험_술(기타내용)_코드']) and '기타' in row['음용경험_술_요약']
+    else row['음용경험_술_요약'],
+    axis=1
+)
 
-print("📊 Welcome 데이터 처리 완료.")
+print("📊 Welcome 데이터 요약 컬럼 생성 완료.")
 
-# --- 4. 최종 데이터프레임 생성 ---
-final_df = df.copy()
+# --- 4. 최종 JSON용 데이터프레임 생성 ---
+# JSON에 저장할 최종 컬럼 리스트 정의
+json_final_columns = [
+    '고유번호', '결혼여부', '자녀수', '자녀유무', '가족수', '최종학력', 
+    '직업', '직무', '월평균_개인소득', '월평균_가구소득', 
+    '보유휴대폰단말기_브랜드', '보유휴대폰모델명', 
+    '보유차량여부', '자동차제조사', '자동차모델', 
+    '보유전자제품_요약', 
+    '흡연경험_요약', 
+    '흡연경험_담배브랜드_요약',
+    '궐련형_전자담배_경험_요약',
+    '음용경험_술_요약'
+]
 
+# df에 실제로 존재하는 컬럼만 선택
+existing_json_columns = [col for col in json_final_columns if col in df.columns]
+json_df = df[existing_json_columns].copy()
 
 # --- 5. 최종 JSON 저장 ---
 output_folder = '../../json_extraction/welcome_data/'
@@ -642,5 +759,5 @@ output_filename = f'{FILE_ID}_preprocessed.json'
 os.makedirs(output_folder, exist_ok=True)
 json_full_path = os.path.join(output_folder, output_filename)
 
-final_df.to_json(json_full_path, orient='records', indent=4, force_ascii=False)
+json_df.to_json(json_full_path, orient='records', indent=4, force_ascii=False)
 print(f"\n🎉 전처리가 완료된 전체 데이터가 '{json_full_path}' 경로에 JSON 파일로 저장되었습니다.")
