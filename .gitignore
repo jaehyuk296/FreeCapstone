@@ -9,6 +9,9 @@ ENV/git
 ENV.bak/
 __pycache__/    
 LLM/merged_panel_data.json
+LLM/sample_100_data.json
+LLM/sample_data.py
+LLM/generated_sentences.json
 
 # 개인정보 및 민감한 정보가 담긴 파일
 paneldata/
