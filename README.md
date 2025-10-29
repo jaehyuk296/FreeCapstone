@@ -22,7 +22,7 @@ pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0
 
 # 디렉터리
 Root : 
-FreeCapstione
+FreeCapstone
 
 ㄴ json_extraction (패널 추출한거 저장)
 
