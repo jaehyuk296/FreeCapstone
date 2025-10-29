@@ -2,11 +2,21 @@
 패널 추출하는 단계까지 프로그램 만들기
 
 # 라이브러리 설치
+(윈도우)
 source venv/Scripts/activate
 
 pip install python-dotenv
 
 python.exe -m pip install --upgrade pip setuptools wheel
+
+pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0.58 langchain-anthropic==0.1.13 pandas numpy==1.26.4 tabulate python-dotenv
+
+(맥)
+source venv/bin/activate
+
+pip install python-dotenv
+
+python -m pip install --upgrade pip setuptools wheel
 
 pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0.58 langchain-anthropic==0.1.13 pandas numpy==1.26.4 tabulate python-dotenv
 
