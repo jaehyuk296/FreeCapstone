@@ -10,9 +10,10 @@ ENV.bak/
 __pycache__/    
 LLM/merged_panel_data.json
 LLM/sample_100_data.json
-LLM/sample_data.py
 LLM/generated_sentences.json
+LLM/generated_sentences_ALL_v2.json
 
 # 개인정보 및 민감한 정보가 담긴 파일
 paneldata/
 json_extraction/
+panel_vector_db/

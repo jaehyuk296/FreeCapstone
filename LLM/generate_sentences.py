@@ -67,7 +67,7 @@ for index, person_data in df_sample.iterrows():
             message = client.messages.create(
                 model="claude-sonnet-4-5", # (모델 이름은 확인된 최신 것으로 사용)
                 max_tokens=250,
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "user", "content": prompt}
                 ]

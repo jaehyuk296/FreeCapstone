@@ -22,6 +22,9 @@ python -m pip install --upgrade pip setuptools wheel
 pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0.58 langchain-anthropic==0.1.13 pandas numpy==1.26.4 tabulate python-dotenv
 
 
+uvicorn main:app --reload
+http://127.0.0.1:8000/docs
+
 # 디렉터리
 Root : 
 FreeCapstone

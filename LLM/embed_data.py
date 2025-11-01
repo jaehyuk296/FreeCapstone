@@ -15,7 +15,7 @@ except NameError:
     base_dir = Path.cwd() 
 
 # 1-1. 1단계에서 생성된 요약 문장 파일 로드
-sentences_path = base_dir / 'generated_sentences.json'
+sentences_path = base_dir / 'generated_sentences_ALL_v2.json'
 try:
     df_sentences = pd.read_json(sentences_path)
     # '요약문장'이 null이거나 비어있는 경우(오류 발생 등)를 대비해 처리
@@ -105,6 +105,7 @@ ids = df_final['고유번호'].tolist()      # 각 항목의 고유 ID (필수)
 # 필터링할 컬럼만 선택
 metadata_columns = [
     # --- 기본 인구통계 (Welcome1) ---
+    '고유번호',
     '성별',
     '나이',
     '지역_시도',
