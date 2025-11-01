@@ -9,7 +9,7 @@ const FASTAPI_BASE_URL = process.env.FASTAPI_SERVER_URL; // 예: http://localhos
 // FastAPI 서버 전용 axios 인스턴스 생성
 export const fastApiAxios = axios.create({
   baseURL: FASTAPI_BASE_URL,
-  timeout: 5000, // 5초 이상 응답이 없으면 에러 처리
+  timeout: 60000, // 5초 이상 응답이 없으면 에러 처리
   headers: {
     'Content-Type': 'application/json',
     // 만약 FastAPI 서버가 API 키를 요구한다면 여기에 추가
