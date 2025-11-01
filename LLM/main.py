@@ -361,6 +361,7 @@ def hybrid_search(search_query: SearchQuery):
 
     return SearchResponse(
         answer=final_answer,
+        source_documents=found_docs,
         source_metadata=found_metadatas 
     )
 
