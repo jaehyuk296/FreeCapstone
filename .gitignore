@@ -17,3 +17,7 @@ LLM/generated_sentences_ALL_v2.json
 paneldata/
 json_extraction/
 panel_vector_db/
+
+# node js 관련
+node_modules/
+.DS_Store
