@@ -1,6 +1,6 @@
 const toPanelDto = (rawItem) => {
   return {
-    eatAloneFrequency: rawItem['고유번호'],
+    id: rawItem['고유번호'],
     age: rawItem['나이'],
     gender: rawItem['성별'],
     region: rawItem['지역_시도'],
