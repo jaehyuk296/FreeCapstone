@@ -8,16 +8,30 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 from pathlib import Path
 import json
-import numpy as np
+from typing import Optional, List, Dict, Any, Union
 
-# --- 0. .env 로드 및 기본 설정 ---
-load_dotenv()
-try:
-    base_dir = Path(__file__).parent 
-except NameError:
-    base_dir = Path.cwd() 
+# ============================================================================
+# Configuration
+# ============================================================================
 
-print("--- 1. 엔진 로드 시작 ---")
+class Config:
+    """애플리케이션 설정"""
+    LLM_MODEL = "claude-sonnet-4-5"
+    EMBEDDING_MODEL = "nlpai-lab/KURE-v1"
+    DB_COLLECTION_NAME = "panel_collection"
+    SIMILARITY_THRESHOLD = 0.5
+    MAX_CONTEXT_ITEMS = 20
+    DEFAULT_LIMIT = "all"
+    
+    # LLM 파라미터
+    ANALYSIS_MAX_TOKENS = 800
+    ANALYSIS_TEMPERATURE = 0.0
+    ANSWER_MAX_TOKENS = 1500
+    ANSWER_TEMPERATURE = 0.1
+
+# ============================================================================
+# Schema Definitions
+# ============================================================================
 
 METADATA_FILTER_SCHEMA = """
 [필터링 가능한 메타데이터 스키마 (정확히 일치)]
@@ -112,8 +126,24 @@ METADATA_SEMANTIC_SCHEMA = """
 - '빠른배송_이용제품': 빠른 배송 서비스로 주로 이용하는 제품 유형
 """
 
-# (★★★ 시스템 프롬프트 (쿼리 분석용) 전역 정의 ★★★)
-system_prompt = f"""
+BINARY_FIELD_MAPPING = {
+    '반려동물_경험유무': {1: '있음', 0: '없음'},
+    '이사_스트레스_여부': {1: '스트레스 받음', 0: '스트레스 안 받음'},
+    '초콜릿_섭취_여부': {1: '섭취함', 0: '섭취 안 함'},
+    '물놀이_선호여부': {1: '선호함', 0: '선호 안 함'},
+    '걱정있음': {1: '있음', 0: '없음'},
+    '혼밥_여부': {1: '혼밥함', 0: '혼밥 안 함'},
+    '최애간식_있음': {1: '있음', 0: '없음'},
+    '설 선호선물있음': {1: '있음', 0: '없음'}
+}
+
+# ============================================================================
+# Prompt Templates
+# ============================================================================
+
+def create_query_analysis_prompt() -> str:
+    """쿼리 분석용 시스템 프롬프트 생성"""
+    return f"""
 당신은 사용자의 자연어 쿼리를 분석하여 ChromaDB에서 사용할 수 있는 JSON 필터와 의미 검색어로 분리하는 '쿼리 분석 전문가'입니다.
 
 [규칙]
@@ -124,13 +154,16 @@ system_prompt = f"""
 {METADATA_SEMANTIC_SCHEMA}
 3.  '나이' 필터는 항상 $gte(이상), $lt(미만) 2개로 분리하여 '$and' 리스트에 포함시키세요.
 4.  '지역_시도'나 '직업' 등 여러 값이 '$in'으로 묶일 수 있습니다.
-5.  필터 조건이 2개 이상일 때만 ChromaDB의 '$and' 연산자 리스트로 묶으세요.
-6.  필터 조건이 1개일 경우, '$and' 없이 딕셔너리만 사용하세요. (예: {{"직업": "사무직"}})
-7.  만약 필터 조건이 없다면 "filters" 키의 값은 반드시 null 로 응답하세요.
-8.  사용자가 "30명", "10개" 등 명시적인 개수를 언급하면 "limit" 키로 해당 숫자를 추출하세요. "모두", "전체" 등을 언급하면 "limit"를 "all"로 설정하세요. 개수 언급이 없으면 "all"을 기본값으로 하세요.
-9.  'semantic_query'는 필터링 키워드를 제외한, 사용자의 모든 핵심 의도를 나타내는 문장으로 생성하세요. 만약 의미 검색어가 없다면 "semantic_query"는 원본 쿼리 텍스트를 그대로 사용하세요.
-10. 오직 JSON 객체 형식으로만 응답해야 합니다.
-11. [중요] 응답은 반드시 "{" 로 시작하고 "}" 로 끝나야 합니다. 어떤 설명이나 인사말도 JSON 앞뒤에 붙이지 마세요.
+5.  "고소득자", "저소득자", "젊은 층" 같은 추상적인 개념은 [메타데이터 스키마]를 참고하여 적절한 $gte, $lt, $in 필터로 변환하세요.
+    - "젊은 층": '나이' 20대~30대 ({{"$gte": 20}}, {{"$lt": 40}})
+    - "고소득자": '월평균_개인소득' (예: {{"월평균_개인소득": {{"$in": ["월 600~699만원", "월 700~799만원", "월 800~899만원", "월 900~999만원", "월 1,000만원 이상"]}}}})
+6.  필터 조건이 2개 이상일 때만 ChromaDB의 '$and' 연산자 리스트로 묶으세요.
+7.  필터 조건이 1개일 경우, '$and' 없이 딕셔너리만 사용하세요. (예: {{"직업": "사무직"}})
+8.  만약 필터 조건이 없다면 "filters" 키의 값은 반드시 null 로 응답하세요.
+9.  사용자가 "30명", "10개" 등 명시적인 개수를 언급하면 "limit" 키로 해당 숫자를 추출하세요. "모두", "전체" 등을 언급하면 "limit"를 "all"로 설정하세요. 개수 언급이 없으면 "all"을 기본값으로 하세요.
+10.  'semantic_query'는 필터링 키워드를 제외한, 사용자의 모든 핵심 의도를 나타내는 문장으로 생성하세요. 만약 의미 검색어가 없다면 "semantic_query"는 원본 쿼리 텍스트를 그대로 사용하세요.
+11.  오직 JSON 객체 형식으로만 응답해야 합니다.
+12. [중요] 응답은 반드시 "{" 로 시작하고 "}" 로 끝나야 합니다. 어떤 설명이나 인사말도 JSON 앞뒤에 붙이지 마세요.
 
 [예시 1: 하이브리드 (필터 + 의미 + 개수)]
 입력: "운동 좋아하고 OTT 보는 30대 남성 사무직 10명"
@@ -183,7 +216,7 @@ system_prompt = f"""
     "limit": "all"
 }}
 
-[예시 5: 필터 + 의미 (★★★ 수정 ★★★)]
+[예시 5: 필터 + 의미]
 입력: "노트북을 보유한 남성 10명"
 출력: {{
     "filters": {{"성별": "남성"}},
@@ -191,7 +224,7 @@ system_prompt = f"""
     "limit": 10
 }}
 
-[예시 6: 필터 + 의미 (★★★ 수정 ★★★)]
+[예시 6: 필터 + 의미]
 입력: "스트레스받을 때 초콜릿을 먹는 5명"
 출력: {{
     "filters": {{"초콜릿_섭취_여부": 1.0}},
@@ -202,7 +235,7 @@ system_prompt = f"""
 [예시 7]
 입력: "아이폰 쓰는 50대 남성 10명"
 출력: {{
-    "filters": {{   
+    "filters": {{   
         "$and": [
             {{"나이": {{"$gte": 50}}}},
             {{"나이": {{"$lt": 60}}}},
@@ -212,7 +245,7 @@ system_prompt = f"""
     }},
     "semantic_query": "아이폰을 사용하는 50대 남성",
     "limit": 10
-}}  
+}}  
 
 [예시 8]
 입력: "소주를 마셔본 경험이 있는 남성 5명"
@@ -221,300 +254,572 @@ system_prompt = f"""
     "semantic_query": "소주를 마셔본 경험이 있는 사람",
     "limit": 5
 }}
+
+[예시 9: (개념 매핑 + 의미 검색)]
+입력: "데스크톱을 가진 고소득자 남성"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"성별": "남성"}},
+            {{"월평균_개인소득": {{"$in": ["월 600~699만원", "월 700~799만원", "월 800~899만원", "월 900~999만원", "월 1,000만원 이상"]}}}}
+        ]
+    }},
+    "semantic_query": "데스크톱(PC)을 보유한 사람",
+    "limit": "all"
+}}
+
+[예시 10: (복합 의미 검색)]
+입력: "소주나 에쎄를 즐기는 20대 남성 모두"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"나이": {{"$gte": 20}}}},
+            {{"나이": {{"$lt": 30}}}},
+            {{"성별": "남성"}}
+        ]
+    }},
+    "semantic_query": "소주를 마시거나 에쎄 담배를 피우는 사람",
+    "limit": "all"
+}}
+
 """
 
-# --- 1. "엔진" 3가지 로드 (서버가 켜질 때 1번만 실행) ---
-try:
-    # 1-1. LLM (Sonnet)
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY가 .env 파일에 없습니다.")
-    llm_client = anthropic.Anthropic(api_key=api_key)
-    LLM_MODEL = "claude-sonnet-4-5" 
-    print(f"✅ LLM ({LLM_MODEL}) 클라이언트 초기화 완료.")
-
-    # 1-2. 임베딩 모델 (KURE-v1)
-    model_name = 'nlpai-lab/KURE-v1' 
-    embedding_model = SentenceTransformer(model_name)
-    print(f"✅ 임베딩 모델 '{model_name}' 로드 완료.")
-
-    # 1-3. 벡터 DB (ChromaDB)
-    db_path = str(base_dir / 'panel_vector_db') 
-    if not os.path.exists(db_path):
-         raise FileNotFoundError(f"'{db_path}' 폴더를 찾을 수 없습니다. 2단계(embed) 스크립트를 먼저 실행하세요.")
-    chroma_client = chromadb.PersistentClient(path=db_path)
-    collection = chroma_client.get_collection(name="panel_collection")
-    print(f"✅ ChromaDB '{db_path}' 연결 완료 (총 {collection.count()}개 데이터).")
-
-except Exception as e:
-    print(f"❌ 엔진 로드 중 치명적 오류 발생: {e}")
-    exit()
-
-print("--- 2. API 서버 설정 ---")
-
-app = FastAPI()
-
-# --- 2. API 입출력 모델 정의 ---
-class SearchQuery(BaseModel):
-    query: str 
-
-class SearchResponse(BaseModel):
-    answer: str  
-    source_documents: list 
-    source_metadata: list 
-
-# --- 3. "하이브리드 검색" RAG API 엔드포인트 ---
-@app.post("/search", response_model=SearchResponse)
-def hybrid_search(search_query: SearchQuery):
-    user_query = search_query.query
-    print(f"\n--- 쿼리 접수: {user_query} ---")
-    
-    # (★★★ 1. 질문 분석 - LLM 1차 호출 ★★★)
-    print("⏳ 1. LLM으로 쿼리 분석 중...")
-    
-    try:
-        analysis_message = llm_client.messages.create(
-            model=LLM_MODEL,
-            max_tokens=800,
-            temperature=0.0, 
-            system=system_prompt, # (수정된 프롬프트 사용)
-            messages=[{"role": "user", "content": f"입력: \"{user_query}\""}]
-        )
-        analysis_text = analysis_message.content[0].text
-        
-        print(f"   - LLM 원본 응답: {analysis_text}") 
-        json_start = analysis_text.find('{')
-        json_end = analysis_text.rfind('}')
-        if json_start != -1 and json_end != -1:
-            analysis_json_str = analysis_text[json_start:json_end+1]
-        else:
-            raise ValueError("LLM 응답에서 JSON 객체를 찾을 수 없습니다.")
-
-        analysis_result = json.loads(analysis_json_str)
-        filters = analysis_result.get("filters") 
-        semantic_query = analysis_result.get("semantic_query", user_query)
-        # (★★★ 수정: 기본값을 "all"로 변경 ★★★)
-        limit = analysis_result.get("limit", "all") 
-        
-        if filters and "$and" in filters and len(filters["$and"]) == 1:
-            print("   - (Info) $and 래퍼 제거: 단일 필터입니다.")
-            filters = filters["$and"][0]
-        elif not filters: 
-            filters = None
-        
-        print(f"   - (수정된) 추출된 필터: {filters}")
-        print(f"   - 의미 검색어: {semantic_query}")
-        print(f"   - 요청 개수 (limit): {limit}") 
-
-    except Exception as e:
-        print(f"   ❌ 쿼리 분석 실패: {e}. 필터 없이 의미 검색만 시도합니다.")
-        filters = None 
-        semantic_query = user_query
-        limit = "all" # (★★★ 수정: 기본값을 "all"로 변경 ★★★)
-    
-    # (★★★ 2. 검색어 벡터화 ★★★)
-    print("⏳ 2. 검색어 벡터화 중 (KURE-v1)...")
-    query_vector = embedding_model.encode([semantic_query])[0].tolist()
-
-    # (★★★ 3. DB 검색 - "limit" 값에 따라 분기 ★★★)
-    if limit == "all":
-        # --- 3A: "모두" 검색 (전체 검색 + 유사도 임계값) ---
-        print(f"⏳ 3. ChromaDB 하이브리드 검색 중 (전체 대상)...")
-        try:
-            total_items_in_db = collection.count()
-            if total_items_in_db == 0:
-                raise ValueError("DB에 데이터가 없습니다.")
-            
-            print(f"   - DB의 총 {total_items_in_db}개 항목을 대상으로 검색합니다.")
-            results = collection.query(
-                query_embeddings=[query_vector],
-                n_results=total_items_in_db, 
-                where=filters,
-                include=["metadatas", "documents", "ids", "distances"]
-            )
-            
-            SIMILARITY_THRESHOLD = 0.5 
-            
-            final_docs = []
-            final_metadatas = []
-            final_ids = []
-            
-            if results.get('ids', [[]])[0]: 
-                for i in range(len(results['ids'][0])):
-                    distance = results['distances'][0][i]
-                    if distance <= SIMILARITY_THRESHOLD:
-                        final_docs.append(results['documents'][0][i])
-                        final_metadatas.append(results['metadatas'][0][i])
-                        final_ids.append(results['ids'][0][i])
-
-            print(f"   - DB 검색 결과 (필터 만족): {len(results['ids'][0])}개")
-            print(f"   - 최종 결과 (유사도 {SIMILARITY_THRESHOLD} 이하): {len(final_docs)}개 찾음.")
-            
-            found_docs = final_docs
-            found_metadatas = final_metadatas
-            found_ids = final_ids
-
-        except Exception as e:
-            print(f"   ⚠️ DB 검색 오류 발생 (include='ids' 실패 추정): {e}. 'ids' 없이 재시도합니다.")
-            try:
-                results = collection.query(
-                    query_embeddings=[query_vector],
-                    n_results=total_items_in_db, 
-                    where=filters,
-                    include=["metadatas", "documents", "distances"] # (ids 제거)
-                )
-                SIMILARITY_THRESHOLD = 0.5 
-                final_docs = []
-                final_metadatas = []
-                final_ids = []
-                if results.get('ids', [[]])[0]: 
-                    for i in range(len(results['ids'][0])):
-                        distance = results['distances'][0][i]
-                        if distance <= SIMILARITY_THRESHOLD:
-                            final_docs.append(results['documents'][0][i])
-                            final_metadatas.append(results['metadatas'][0][i])
-                            final_ids.append(results['ids'][0][i])
-                print(f"   - DB 검색 재시도 (필터 만족): {len(results['ids'][0])}개")
-                print(f"   - 최종 결과 (유사도 {SIMILARITY_THRESHOLD} 이하): {len(final_docs)}개 찾음.")
-                found_docs = final_docs
-                found_metadatas = final_metadatas
-                found_ids = final_ids
-            except Exception as e2:
-                print(f"   ❌ DB 검색 재시도 실패: {e2}")
-                raise HTTPException(status_code=500, detail=f"DB 검색 오류: {e2}")
-    
-    else:
-        # --- 3B: "상위 N개" 검색 (limit 숫자 사용) ---
-        print(f"⏳ 3. ChromaDB 하이브리드 검색 중 (상위 {limit}개)...")
-        try:
-            try:
-                n_limit = int(limit)
-            except ValueError:
-                print(f"   ⚠️ (경고) LLM이 반환한 limit 값 '{limit}'가 숫자가 아니므로 5로 고정합니다.")
-                n_limit = 5
-                
-            results = collection.query(
-                query_embeddings=[query_vector],
-                n_results=n_limit, 
-                where=filters,
-                include=["metadatas", "documents", "ids"] 
-            )
-            found_docs = results.get('documents', [[]])[0]
-            found_metadatas = results.get('metadatas', [[]])[0]
-            found_ids = results.get('ids', [[]])[0] 
-            print(f"   - DB 검색 결과 (필터 만족 & 유사도 상위): {len(found_docs)}개 찾음.")
-
-        except Exception as e:
-            print(f"   ⚠️ DB 검색 오류 발생 (include='ids' 실패 추정): {e}. 'ids' 없이 재시도합니다.")
-            try:
-                results = collection.query(
-                    query_embeddings=[query_vector],
-                    n_results=n_limit,
-                    where=filters,
-                    include=["metadatas", "documents"] # (ids 제거)
-                )
-                found_docs = results.get('documents', [[]])[0]
-                found_metadatas = results.get('metadatas', [[]])[0]
-                found_ids = results.get('ids', [[]])[0] 
-                print(f"   - DB 검색 재시도 성공 (상위 {len(found_docs)}개) 찾음.")
-            except Exception as e2:
-                print(f"   ❌ DB 검색 재시도 실패: {e2}")
-                raise HTTPException(status_code=500, detail=f"DB 검색 오류: {e2}")
-
-    # (★★★ 3.5. '고유번호' 및 1/0 값 텍스트 변환 ★★★)
-    print("⏳ 3.5. 메타데이터 변환 중...")
-    
-    binary_to_text_map = {
-        '반려동물_경험유무': {1: '있음', 0: '없음'},
-        '이사_스트레스_여부': {1: '스트레스 받음', 0: '스트레스 안 받음'},
-        '초콜릿_섭취_여부': {1: '섭취함', 0: '섭취 안 함'},
-        '물놀이_선호여부': {1: '선호함', 0: '선호 안 함'},
-        '걱정있음': {1: '있음', 0: '없음'},
-        '혼밥_여부': {1: '혼밥함', 0: '혼밥 안 함'},
-        '최애간식_있음': {1: '있음', 0: '없음'},
-        '설 선호선물있음': {1: '있음', 0: '없음'}
-    }
-    
-    transformed_metadatas = []
-    for i in range(len(found_ids)):
-        new_meta = found_metadatas[i].copy() 
-        new_meta['고유번호'] = found_ids[i] 
-
-        for key, mapping in binary_to_text_map.items():
-            if key in new_meta:
-                value = new_meta[key]
-                if value == 1 or value == 1.0:
-                    new_meta[key] = mapping[1]
-                elif value == 0 or value == 0.0:
-                    new_meta[key] = mapping[0]
-        transformed_metadatas.append(new_meta)
-    
-    found_metadatas = transformed_metadatas 
-    print("   - 메타데이터 변환 완료.")
-
-    # (★★★ 4. 답변 생성 - LLM 2차 호출 (RAG) ★★★)
-    print("⏳ 4. LLM으로 최종 답변 생성 중 (Sonnet)...")
-    if not found_docs:
-        final_answer = "해당 조건에 맞는 사용자를 찾지 못했습니다."
-        print(f"   - 최종 답변: {final_answer}")
-    else:
-        try:
-            MAX_CONTEXT_ITEMS = 20 
-            if len(found_docs) > MAX_CONTEXT_ITEMS:
-                print(f"   ⚠️ 검색 결과({len(found_docs)}개)가 너무 많아 {MAX_CONTEXT_ITEMS}개만 요약에 사용합니다.")
-                found_docs_for_context = found_docs[:MAX_CONTEXT_ITEMS]
-                found_metadatas_for_context = found_metadatas[:MAX_CONTEXT_ITEMS]
-            else:
-                found_docs_for_context = found_docs
-                found_metadatas_for_context = found_metadatas
-            
-            context_items = []
-            for i in range(len(found_docs_for_context)):
-                doc_text = found_docs_for_context[i]
-                meta_text = json.dumps(found_metadatas_for_context[i], ensure_ascii=False) 
-                user_id = found_metadatas_for_context[i].get('고유번호', 'ID정보없음')
-                context_items.append(
-                    f"문서 {i+1}:\n"
-                    f"- 고유번호: {user_id}\n"
-                    f"- 요약문: {doc_text}\n"
-                    f"- 메타데이터: {meta_text}"
-                )
-            context_str = "\n\n".join(context_items)
-            
-            final_prompt = f"""당신은 검색 결과를 요약하여 답변하는 어시스턴트입니다.
+def create_answer_generation_prompt(
+    user_query: str,
+    found_count: int,
+    context_str: str
+) -> str:
+    """답변 생성용 프롬프트 생성"""
+    return f"""당신은 검색 결과를 요약하여 답변하는 어시스턴트입니다.
 사용자의 질문은 '{user_query}'였습니다.
-이 질문에 대해 DB에서 찾은 {len(found_docs)}개의 참고 자료는 다음과 같습니다.
+이 질문에 대해 DB에서 찾은 {found_count}개의 참고 자료는 다음과 같습니다.
 
 [참고 자료]
 {context_str}
 
 [지시]
 위 [참고 자료]를 바탕으로 사용자의 질문에 대해 자연스러운 문장으로 요약하여 답변해주세요.
-총 몇 명을 찾았는지 반드시 언급하세요. (예: "'{user_query}' 조건에 맞는 {len(found_docs)}명의 사용자를 찾았습니다. 이들은 주로...")
+총 몇 명을 찾았는지 반드시 언급하세요. (예: "'{user_query}' 조건에 맞는 {found_count}명의 사용자를 찾았습니다. 이들은 주로...")
 각 인물을 설명할 때, **반드시 '고유번호'를 (고유번호: [번호]) 형식으로 먼저 언급**해주세요.
 절대로 참고 자료에 없는 내용을 지어내지 마세요.
 """
-            message = llm_client.messages.create(
-                model=LLM_MODEL,
-                max_tokens=1500,
-                temperature=0.1, 
-                messages=[{"role": "user", "content": final_prompt}]
+
+# ============================================================================
+# API Models
+# ============================================================================
+
+class SearchQuery(BaseModel):
+    query: str
+
+class SearchResponse(BaseModel):
+    answer: str
+    source_documents: List[str]
+    source_metadata: List[Dict[str, Any]]
+
+# ============================================================================
+# Core Services
+# ============================================================================
+
+class EngineManager:
+    """LLM, 임베딩 모델, ChromaDB 관리"""
+    
+    def __init__(self):
+        self.llm_client: Optional[anthropic.Anthropic] = None
+        self.embedding_model: Optional[SentenceTransformer] = None
+        self.collection: Optional[Any] = None
+    
+    def initialize(self) -> None:
+        """엔진 초기화"""
+        print("--- 1. 엔진 로드 시작 ---")
+        
+        # 환경 변수 로드
+        load_dotenv()
+        try:
+            base_dir = Path(__file__).parent
+        except NameError:
+            base_dir = Path.cwd()
+        
+        # LLM 초기화
+        self._initialize_llm()
+        
+        # 임베딩 모델 초기화
+        self._initialize_embedding_model()
+        
+        # ChromaDB 초기화
+        self._initialize_chromadb(base_dir)
+        
+        print("✅ 모든 엔진 로드 완료")
+    
+    def _initialize_llm(self) -> None:
+        """LLM 클라이언트 초기화"""
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY가 .env 파일에 없습니다.")
+        
+        self.llm_client = anthropic.Anthropic(api_key=api_key)
+        print(f"✅ LLM ({Config.LLM_MODEL}) 클라이언트 초기화 완료.")
+    
+    def _initialize_embedding_model(self) -> None:
+        """임베딩 모델 초기화"""
+        self.embedding_model = SentenceTransformer(Config.EMBEDDING_MODEL)
+        print(f"✅ 임베딩 모델 '{Config.EMBEDDING_MODEL}' 로드 완료.")
+    
+    def _initialize_chromadb(self, base_dir: Path) -> None:
+        """ChromaDB 초기화"""
+        db_path = str(base_dir / 'panel_vector_db')
+        if not os.path.exists(db_path):
+            raise FileNotFoundError(
+                f"'{db_path}' 폴더를 찾을 수 없습니다. "
+                "2단계(embed) 스크립트를 먼저 실행하세요."
             )
-            final_answer = message.content[0].text
+        
+        chroma_client = chromadb.PersistentClient(path=db_path)
+        self.collection = chroma_client.get_collection(
+            name=Config.DB_COLLECTION_NAME
+        )
+        print(
+            f"✅ ChromaDB '{db_path}' 연결 완료 "
+            f"(총 {self.collection.count()}개 데이터)."
+        )
+
+
+class QueryAnalyzer:
+    """쿼리 분석 서비스"""
+    
+    def __init__(self, llm_client: anthropic.Anthropic):
+        self.llm_client = llm_client
+        self.system_prompt = create_query_analysis_prompt()
+    
+    def analyze(self, user_query: str) -> Dict[str, Any]:
+        """쿼리를 분석하여 필터와 의미 검색어 추출"""
+        print("⏳ 1. LLM으로 쿼리 분석 중...")
+        
+        try:
+            analysis_message = self.llm_client.messages.create(
+                model=Config.LLM_MODEL,
+                max_tokens=Config.ANALYSIS_MAX_TOKENS,
+                temperature=Config.ANALYSIS_TEMPERATURE,
+                system=self.system_prompt,
+                messages=[{"role": "user", "content": f"입력: \"{user_query}\""}]
+            )
+            
+            analysis_text = analysis_message.content[0].text
+            print(f"   - LLM 원본 응답: {analysis_text}")
+            
+            # JSON 추출
+            json_str = self._extract_json(analysis_text)
+            analysis_result = json.loads(json_str)
+            
+            # 필터 정규화
+            filters = self._normalize_filters(analysis_result.get("filters"))
+            semantic_query = analysis_result.get("semantic_query", user_query)
+            limit = analysis_result.get("limit", Config.DEFAULT_LIMIT)
+            
+            print(f"   - 추출된 필터: {filters}")
+            print(f"   - 의미 검색어: {semantic_query}")
+            print(f"   - 요청 개수 (limit): {limit}")
+            
+            return {
+                "filters": filters,
+                "semantic_query": semantic_query,
+                "limit": limit
+            }
+            
+        except Exception as e:
+            print(f"   ❌ 쿼리 분석 실패: {e}. 필터 없이 의미 검색만 시도합니다.")
+            return {
+                "filters": None,
+                "semantic_query": user_query,
+                "limit": Config.DEFAULT_LIMIT
+            }
+    
+    def _extract_json(self, text: str) -> str:
+        """텍스트에서 JSON 문자열 추출"""
+        json_start = text.find('{')
+        json_end = text.rfind('}')
+        if json_start == -1 or json_end == -1:
+            raise ValueError("LLM 응답에서 JSON 객체를 찾을 수 없습니다.")
+        return text[json_start:json_end+1]
+    
+    def _normalize_filters(self, filters: Optional[Dict]) -> Optional[Dict]:
+        """필터 정규화 (단일 $and 래퍼 제거)"""
+        if not filters:
+            return None
+        
+        if "$and" in filters and len(filters["$and"]) == 1:
+            print("   - (Info) $and 래퍼 제거: 단일 필터입니다.")
+            return filters["$and"][0]
+        
+        return filters
+
+
+class VectorSearcher:
+    """벡터 검색 서비스"""
+    
+    def __init__(
+        self,
+        embedding_model: SentenceTransformer,
+        collection: Any
+    ):
+        self.embedding_model = embedding_model
+        self.collection = collection
+    
+    def search(
+        self,
+        semantic_query: str,
+        filters: Optional[Dict],
+        limit: Union[str, int]
+    ) -> tuple[List[str], List[Dict], List[str]]:
+        """하이브리드 검색 수행"""
+        # 벡터화
+        query_vector = self._vectorize_query(semantic_query)
+        
+        # limit에 따라 검색 방식 분기
+        if limit == "all":
+            return self._search_all(query_vector, filters)
+        else:
+            return self._search_top_n(query_vector, filters, limit)
+    
+    def _vectorize_query(self, query: str) -> List[float]:
+        """검색어 벡터화"""
+        print("⏳ 2. 검색어 벡터화 중 (KURE-v1)...")
+        return self.embedding_model.encode([query])[0].tolist()
+    
+    def _search_all(
+        self,
+        query_vector: List[float],
+        filters: Optional[Dict]
+    ) -> tuple[List[str], List[Dict], List[str]]:
+        """전체 검색 (유사도 임계값 적용)"""
+        print("⏳ 3. ChromaDB 하이브리드 검색 중 (전체 대상)...")
+        
+        try:
+            total_items = self.collection.count()
+            if total_items == 0:
+                raise ValueError("DB에 데이터가 없습니다.")
+            
+            print(f"   - DB의 총 {total_items}개 항목을 대상으로 검색합니다.")
+            
+            results = self._query_collection(
+                query_vector,
+                total_items,
+                filters,
+                include_ids=True
+            )
+            
+            # 유사도 임계값 필터링
+            docs, metadatas, ids = self._filter_by_similarity(results)
+            
+            print(f"   - DB 검색 결과 (필터 만족): {len(results['ids'][0])}개")
+            print(f"   - 최종 결과 (유사도 {Config.SIMILARITY_THRESHOLD} 이하): {len(docs)}개 찾음.")
+            
+            return docs, metadatas, ids
+            
+        except Exception as e:
+            print(f"   ⚠️ DB 검색 오류 발생: {e}. 'ids' 없이 재시도합니다.")
+            return self._search_all_without_ids(query_vector, filters, total_items)
+    
+    def _search_top_n(
+        self,
+        query_vector: List[float],
+        filters: Optional[Dict],
+        limit: Union[str, int]
+    ) -> tuple[List[str], List[Dict], List[str]]:
+        """상위 N개 검색"""
+        try:
+            n_limit = int(limit)
+        except ValueError:
+            print(f"   ⚠️ (경고) limit 값 '{limit}'가 숫자가 아니므로 5로 고정합니다.")
+            n_limit = 5
+        
+        print(f"⏳ 3. ChromaDB 하이브리드 검색 중 (상위 {n_limit}개)...")
+        
+        try:
+            results = self._query_collection(
+                query_vector,
+                n_limit,
+                filters,
+                include_ids=True
+            )
+            
+            docs = results.get('documents', [[]])[0]
+            metadatas = results.get('metadatas', [[]])[0]
+            ids = results.get('ids', [[]])[0]
+            
+            print(f"   - DB 검색 결과 (필터 만족 & 유사도 상위): {len(docs)}개 찾음.")
+            
+            return docs, metadatas, ids
+            
+        except Exception as e:
+            print(f"   ⚠️ DB 검색 오류 발생: {e}. 'ids' 없이 재시도합니다.")
+            return self._search_top_n_without_ids(query_vector, filters, n_limit)
+    
+    def _query_collection(
+        self,
+        query_vector: List[float],
+        n_results: int,
+        filters: Optional[Dict],
+        include_ids: bool = True
+    ) -> Dict:
+        """ChromaDB 쿼리 실행"""
+        include_list = ["metadatas", "documents", "distances"]
+        if include_ids:
+            include_list.append("ids")
+        
+        return self.collection.query(
+            query_embeddings=[query_vector],
+            n_results=n_results,
+            where=filters,
+            include=include_list
+        )
+    
+    def _filter_by_similarity(
+        self,
+        results: Dict
+    ) -> tuple[List[str], List[Dict], List[str]]:
+        """유사도 임계값으로 필터링"""
+        docs, metadatas, ids = [], [], []
+        
+        if results.get('ids', [[]])[0]:
+            for i in range(len(results['ids'][0])):
+                distance = results['distances'][0][i]
+                if distance <= Config.SIMILARITY_THRESHOLD:
+                    docs.append(results['documents'][0][i])
+                    metadatas.append(results['metadatas'][0][i])
+                    ids.append(results['ids'][0][i])
+        
+        return docs, metadatas, ids
+    
+    def _search_all_without_ids(
+        self,
+        query_vector: List[float],
+        filters: Optional[Dict],
+        total_items: int
+    ) -> tuple[List[str], List[Dict], List[str]]:
+        """ids 없이 전체 검색 재시도"""
+        results = self._query_collection(
+            query_vector,
+            total_items,
+            filters,
+            include_ids=False
+        )
+        
+        docs, metadatas, ids = self._filter_by_similarity(results)
+        print(f"   - DB 검색 재시도 성공: {len(docs)}개 찾음.")
+        return docs, metadatas, ids
+    
+    def _search_top_n_without_ids(
+        self,
+        query_vector: List[float],
+        filters: Optional[Dict],
+        n_limit: int
+    ) -> tuple[List[str], List[Dict], List[str]]:
+        """ids 없이 상위 N개 검색 재시도"""
+        results = self._query_collection(
+            query_vector,
+            n_limit,
+            filters,
+            include_ids=False
+        )
+        
+        docs = results.get('documents', [[]])[0]
+        metadatas = results.get('metadatas', [[]])[0]
+        ids = results.get('ids', [[]])[0]
+        
+        print(f"   - DB 검색 재시도 성공: {len(docs)}개 찾음.")
+        return docs, metadatas, ids
+
+
+class MetadataTransformer:
+    """메타데이터 변환 서비스"""
+    
+    @staticmethod
+    def transform(
+        metadatas: List[Dict],
+        ids: List[str]
+    ) -> List[Dict]:
+        """메타데이터 변환 (고유번호 추가 및 1/0 값 텍스트 변환)"""
+        print("⏳ 3.5. 메타데이터 변환 중...")
+        
+        transformed = []
+        for i in range(len(ids)):
+            new_meta = metadatas[i].copy()
+            new_meta['고유번호'] = ids[i]
+            
+            # 바이너리 필드 변환
+            for key, mapping in BINARY_FIELD_MAPPING.items():
+                if key in new_meta:
+                    value = new_meta[key]
+                    if value in [1, 1.0]:
+                        new_meta[key] = mapping[1]
+                    elif value in [0, 0.0]:
+                        new_meta[key] = mapping[0]
+            
+            transformed.append(new_meta)
+        
+        print("   - 메타데이터 변환 완료.")
+        return transformed
+
+
+class AnswerGenerator:
+    """답변 생성 서비스"""
+    
+    def __init__(self, llm_client: anthropic.Anthropic):
+        self.llm_client = llm_client
+    
+    def generate(
+        self,
+        user_query: str,
+        docs: List[str],
+        metadatas: List[Dict]
+    ) -> str:
+        """LLM으로 최종 답변 생성"""
+        print("⏳ 4. LLM으로 최종 답변 생성 중 (Sonnet)...")
+        
+        if not docs:
+            answer = "해당 조건에 맞는 사용자를 찾지 못했습니다."
+            print(f"   - 최종 답변: {answer}")
+            return answer
+        
+        try:
+            # 컨텍스트 준비
+            context_str = self._prepare_context(docs, metadatas)
+            
+            # 프롬프트 생성
+            prompt = create_answer_generation_prompt(
+                user_query,
+                len(docs),
+                context_str
+            )
+            
+            # LLM 호출
+            message = self.llm_client.messages.create(
+                model=Config.LLM_MODEL,
+                max_tokens=Config.ANSWER_MAX_TOKENS,
+                temperature=Config.ANSWER_TEMPERATURE,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            answer = message.content[0].text
+            print(f"   - 최종 답변: {answer}")
+            return answer
+            
         except Exception as e:
             print(f"   ❌ 답변 생성 실패: {e}")
-            final_answer = f"답변 생성 중 오류 발생: {e}"
+            return f"답변 생성 중 오류 발생: {e}"
     
-    print(f"   - 최종 답변: {final_answer}")
+    def _prepare_context(
+        self,
+        docs: List[str],
+        metadatas: List[Dict]
+    ) -> str:
+        """컨텍스트 문자열 준비"""
+        # 너무 많은 경우 제한
+        if len(docs) > Config.MAX_CONTEXT_ITEMS:
+            print(
+                f"   ⚠️ 검색 결과({len(docs)}개)가 너무 많아 "
+                f"{Config.MAX_CONTEXT_ITEMS}개만 요약에 사용합니다."
+            )
+            docs = docs[:Config.MAX_CONTEXT_ITEMS]
+            metadatas = metadatas[:Config.MAX_CONTEXT_ITEMS]
+        
+        context_items = []
+        for i in range(len(docs)):
+            user_id = metadatas[i].get('고유번호', 'ID정보없음')
+            meta_text = json.dumps(metadatas[i], ensure_ascii=False)
+            
+            context_items.append(
+                f"문서 {i+1}:\n"
+                f"- 고유번호: {user_id}\n"
+                f"- 요약문: {docs[i]}\n"
+                f"- 메타데이터: {meta_text}"
+            )
+        
+        return "\n\n".join(context_items)
 
-    return SearchResponse(
-        answer=final_answer,
-        source_documents=found_docs, 
-        source_metadata=found_metadatas 
-    )
 
-# --- 5. 서버 실행 ---
+# ============================================================================
+# Main Application
+# ============================================================================
+
+class RAGService:
+    """RAG 서비스 통합 클래스"""
+    
+    def __init__(self, engine_manager: EngineManager):
+        self.query_analyzer = QueryAnalyzer(engine_manager.llm_client)
+        self.vector_searcher = VectorSearcher(
+            engine_manager.embedding_model,
+            engine_manager.collection
+        )
+        self.answer_generator = AnswerGenerator(engine_manager.llm_client)
+    
+    def search(self, user_query: str) -> SearchResponse:
+        """하이브리드 검색 실행"""
+        print(f"\n--- 쿼리 접수: {user_query} ---")
+        
+        # 1. 쿼리 분석
+        analysis = self.query_analyzer.analyze(user_query)
+        
+        # 2. 벡터 검색
+        docs, metadatas, ids = self.vector_searcher.search(
+            analysis["semantic_query"],
+            analysis["filters"],
+            analysis["limit"]
+        )
+        
+        # 3. 메타데이터 변환
+        transformed_metadatas = MetadataTransformer.transform(metadatas, ids)
+        
+        # 4. 답변 생성
+        answer = self.answer_generator.generate(
+            user_query,
+            docs,
+            transformed_metadatas
+        )
+        
+        return SearchResponse(
+            answer=answer,
+            source_documents=docs,
+            source_metadata=transformed_metadatas
+        )
+
+
+# ============================================================================
+# FastAPI Application
+# ============================================================================
+
+# 엔진 초기화 (모듈 로드 시 1회 실행)
+print("--- 2. API 서버 설정 ---")
+engine_manager = EngineManager()
+try:
+    engine_manager.initialize()
+except Exception as e:
+    print(f"❌ 엔진 로드 중 치명적 오류 발생: {e}")
+    exit()
+
+# FastAPI 앱 생성
+app = FastAPI()
+
+# RAG 서비스 생성
+rag_service = RAGService(engine_manager)
+
+# API 엔드포인트 등록
+@app.post("/search", response_model=SearchResponse)
+def hybrid_search(search_query: SearchQuery):
+    try:
+        return rag_service.search(search_query.query)
+    except Exception as e:
+        print(f"❌ 검색 중 오류 발생: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Server Entry Point
+# ============================================================================
+
 if __name__ == "__main__":
     print("🚀 FastAPI 서버를 http://127.0.0.1:8000 에서 실행합니다.")
     print("   API 테스트 주소: http://127.0.0.1:8000/docs")
+    
     uvicorn.run(app, host="127.0.0.1", port=8000)
+                
