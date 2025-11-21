@@ -848,16 +848,14 @@ class RAGService:
     # [추가됨] 비교 분석 메서드
     def compare_with_summary(self, req: CompareRequest) -> Dict[str, Any]:
         """
-        A값(입력받음) vs B값(검색함) 비교 및 요약 생성
+        A(입력값) vs B(검색값) 비교 후, 전체 데이터와 요약을 반환
         """
         print(f"\n--- 비교 분석 요청: '{req.caseA}'({req.countA}명) vs '{req.caseB}' ---")
 
-        # ---------------------------------------------------------
-        # 1. 집단 B (Target) 검색 및 카운트
-        # ---------------------------------------------------------
+        # 1. 집단 B 검색 및 카운트
         analysis_b = self.query_analyzer.analyze(req.caseB)
         
-        # 집단 B의 전체 인원 수 파악 (limit="all")
+        # limit="all"로 전체 개수 파악
         _, _, ids_b = self.vector_searcher.search(
             analysis_b["semantic_query"],
             analysis_b["filters"],
@@ -867,41 +865,39 @@ class RAGService:
         
         print(f"   -> 집단 B 검색 결과: {count_b}명")
 
-        # ---------------------------------------------------------
-        # 2. LLM을 이용한 1~2줄 비교 요약 생성
-        # ---------------------------------------------------------
+        # 2. LLM 비교 요약 생성
         summary_prompt = f"""
         [데이터]
         - 집단 A ({req.caseA}): {req.countA}명
         - 집단 B ({req.caseB}): {count_b}명
 
         [지시]
-        위 데이터를 바탕으로 두 집단의 규모를 비교하는 1~2줄의 짧은 요약 코멘트를 작성하세요.
-        단순히 숫자만 언급하지 말고, "A가 B보다 약 2배 더 많습니다" 또는 "두 집단이 비슷한 수준입니다" 처럼 
-        해석이 담긴 문장으로 정중하게(해요체) 작성하세요.
+        두 집단의 표본 수를 비교하는 1~2줄의 핵심 요약을 작성하세요.
+        누가 더 많은지, 비율은 어떤지 등을 정중한 해요체로 설명하세요.
         """
 
         try:
+            # 요약 생성 (토큰 절약을 위해 max_tokens 제한)
             message = self.query_analyzer.llm_client.messages.create(
                 model=Config.LLM_MODEL,
-                max_tokens=150, # 짧은 문장이므로 토큰 제한
+                max_tokens=200,
                 temperature=0.5,
                 messages=[{"role": "user", "content": summary_prompt}]
             )
             summary_text = message.content[0].text
         except Exception as e:
             print(f"   ⚠️ 요약 생성 실패: {e}")
-            summary_text = f"{req.caseB}의 인원은 {count_b}명으로 확인됩니다."
+            summary_text = f"집단 B({req.caseB})의 인원은 {count_b}명입니다."
 
-        # ---------------------------------------------------------
-        # 3. 결과 반환
-        # ---------------------------------------------------------
+        # 3. [요청하신 포맷] 모든 정보를 포함하여 반환
         return {
-            "status": "success",
-            "countB": count_b,      # B의 인원 수
-            "summary": summary_text # 1~2줄 요약 멘트
+            "caseA": req.caseA,
+            "caseB": req.caseB,     
+            "countA": req.countA,    
+            "countB": count_b,       
+            "summary": summary_text  
         }
-
+    
 # ============================================================================
 # FastAPI Application
 # ============================================================================
