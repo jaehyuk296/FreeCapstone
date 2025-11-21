@@ -316,6 +316,10 @@ class SearchResponse(BaseModel):
     source_documents: List[str]
     source_metadata: List[Dict[str, Any]]
 
+class CompareQuery(BaseModel):
+    query_a: str  # 메인 질의
+    query_b: str  # 서브 질의
+
 # ============================================================================
 # Core Services
 # ============================================================================
@@ -839,6 +843,55 @@ class RAGService:
     # [추가됨] 요약 메서드
     def summarize_dashboard(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return self.summarizer.generate_summary(data)
+    
+    def compare_groups(self, query_a: str, query_b: str) -> Dict[str, Any]:
+        """두 개의 쿼리를 각각 검색하여 표본 수를 비교"""
+        print(f"\n--- 집단 비교 분석 시작: '{query_a}' vs '{query_b}' ---")
+
+        # ---------------------------------------------------------
+        # 1. 집단 A 분석 (메인 질의)
+        # ---------------------------------------------------------
+        analysis_a = self.query_analyzer.analyze(query_a)
+        # 비교를 위해 limit는 무조건 "all"로 설정하여 전체 수를 셉니다.
+        _, _, ids_a = self.vector_searcher.search(
+            analysis_a["semantic_query"],
+            analysis_a["filters"],
+            limit="all" 
+        )
+        count_a = len(ids_a[0]) if ids_a else 0
+
+        # ---------------------------------------------------------
+        # 2. 집단 B 분석 (새로운 서브 질의)
+        # ---------------------------------------------------------
+        analysis_b = self.query_analyzer.analyze(query_b)
+        _, _, ids_b = self.vector_searcher.search(
+            analysis_b["semantic_query"],
+            analysis_b["filters"],
+            limit="all"
+        )
+        count_b = len(ids_b[0]) if ids_b else 0
+
+        print(f"   -> 결과: A({count_a}명) vs B({count_b}명)")
+
+        # ---------------------------------------------------------
+        # 3. 프론트엔드 차트용 JSON 반환
+        # ---------------------------------------------------------
+        return {
+            "status": "success",
+            "data": [
+                {
+                    "name": "표본 A (Main)",
+                    "label": query_a, # 그래프 라벨용
+                    "value": count_a
+                },
+                {
+                    "name": "표본 B (Sub)",
+                    "label": query_b,
+                    "value": count_b
+                }
+            ],
+            "analysis_msg": f"표본 A는 {count_a}명, 표본 B는 {count_b}명으로 확인됩니다."
+        }
 
 # ============================================================================
 # FastAPI Application
@@ -877,6 +930,17 @@ def generate_dashboard_summary(data: Dict[str, Any]):
         return rag_service.summarize_dashboard(data)
     except Exception as e:
         print(f"❌ 요약 중 오류 발생: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/compare")
+def compare_samples(query: CompareQuery):
+    """
+    메인 질의(A)와 서브 질의(B)를 받아 표본 수를 비교하는 엔드포인트
+    """
+    try:
+        return rag_service.compare_groups(query.query_a, query.query_b)
+    except Exception as e:
+        print(f"❌ 비교 분석 중 오류 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
