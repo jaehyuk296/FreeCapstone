@@ -316,9 +316,10 @@ class SearchResponse(BaseModel):
     source_documents: List[str]
     source_metadata: List[Dict[str, Any]]
 
-class CompareQuery(BaseModel):
-    query_a: str  # 메인 질의
-    query_b: str  # 서브 질의
+class CompareRequest(BaseModel):
+    caseA: str    # 메인질의
+    caseB: str    # 서브질의
+    countA: int  # 메인질의 인원
 
 # ============================================================================
 # Core Services
@@ -844,53 +845,61 @@ class RAGService:
     def summarize_dashboard(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return self.summarizer.generate_summary(data)
     
-    def compare_groups(self, query_a: str, query_b: str) -> Dict[str, Any]:
-        """두 개의 쿼리를 각각 검색하여 표본 수를 비교"""
-        print(f"\n--- 집단 비교 분석 시작: '{query_a}' vs '{query_b}' ---")
+    # [추가됨] 비교 분석 메서드
+    def compare_with_summary(self, req: CompareRequest) -> Dict[str, Any]:
+        """
+        A값(입력받음) vs B값(검색함) 비교 및 요약 생성
+        """
+        print(f"\n--- 비교 분석 요청: '{req.caseA}'({req.countA}명) vs '{req.caseB}' ---")
 
         # ---------------------------------------------------------
-        # 1. 집단 A 분석 (메인 질의)
+        # 1. 집단 B (Target) 검색 및 카운트
         # ---------------------------------------------------------
-        analysis_a = self.query_analyzer.analyze(query_a)
-        # 비교를 위해 limit는 무조건 "all"로 설정하여 전체 수를 셉니다.
-        _, _, ids_a = self.vector_searcher.search(
-            analysis_a["semantic_query"],
-            analysis_a["filters"],
-            limit="all" 
-        )
-        count_a = len(ids_a[0]) if ids_a else 0
-
-        # ---------------------------------------------------------
-        # 2. 집단 B 분석 (새로운 서브 질의)
-        # ---------------------------------------------------------
-        analysis_b = self.query_analyzer.analyze(query_b)
+        analysis_b = self.query_analyzer.analyze(req.caseB)
+        
+        # 집단 B의 전체 인원 수 파악 (limit="all")
         _, _, ids_b = self.vector_searcher.search(
             analysis_b["semantic_query"],
             analysis_b["filters"],
             limit="all"
         )
         count_b = len(ids_b[0]) if ids_b else 0
-
-        print(f"   -> 결과: A({count_a}명) vs B({count_b}명)")
+        
+        print(f"   -> 집단 B 검색 결과: {count_b}명")
 
         # ---------------------------------------------------------
-        # 3. 프론트엔드 차트용 JSON 반환
+        # 2. LLM을 이용한 1~2줄 비교 요약 생성
+        # ---------------------------------------------------------
+        summary_prompt = f"""
+        [데이터]
+        - 집단 A ({req.caseA}): {req.countA}명
+        - 집단 B ({req.caseB}): {count_b}명
+
+        [지시]
+        위 데이터를 바탕으로 두 집단의 규모를 비교하는 1~2줄의 짧은 요약 코멘트를 작성하세요.
+        단순히 숫자만 언급하지 말고, "A가 B보다 약 2배 더 많습니다" 또는 "두 집단이 비슷한 수준입니다" 처럼 
+        해석이 담긴 문장으로 정중하게(해요체) 작성하세요.
+        """
+
+        try:
+            message = self.query_analyzer.llm_client.messages.create(
+                model=Config.LLM_MODEL,
+                max_tokens=150, # 짧은 문장이므로 토큰 제한
+                temperature=0.5,
+                messages=[{"role": "user", "content": summary_prompt}]
+            )
+            summary_text = message.content[0].text
+        except Exception as e:
+            print(f"   ⚠️ 요약 생성 실패: {e}")
+            summary_text = f"{req.caseB}의 인원은 {count_b}명으로 확인됩니다."
+
+        # ---------------------------------------------------------
+        # 3. 결과 반환
         # ---------------------------------------------------------
         return {
             "status": "success",
-            "data": [
-                {
-                    "name": "표본 A (Main)",
-                    "label": query_a, # 그래프 라벨용
-                    "value": count_a
-                },
-                {
-                    "name": "표본 B (Sub)",
-                    "label": query_b,
-                    "value": count_b
-                }
-            ],
-            "analysis_msg": f"표본 A는 {count_a}명, 표본 B는 {count_b}명으로 확인됩니다."
+            "countB": count_b,      # B의 인원 수
+            "summary": summary_text # 1~2줄 요약 멘트
         }
 
 # ============================================================================
@@ -933,14 +942,15 @@ def generate_dashboard_summary(data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/compare")
-def compare_samples(query: CompareQuery):
+def compare_samples(request: CompareRequest):
     """
-    메인 질의(A)와 서브 질의(B)를 받아 표본 수를 비교하는 엔드포인트
+    Input: { "caseA": "...", "caseB": "...", "countA": 50 }
+    Output: { "status": "success", "countB": 30, "summary": "A가 B보다..." }
     """
     try:
-        return rag_service.compare_groups(query.query_a, query.query_b)
+        return rag_service.compare_with_summary(request)
     except Exception as e:
-        print(f"❌ 비교 분석 중 오류 발생: {e}")
+        print(f"❌ 비교 분석 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
