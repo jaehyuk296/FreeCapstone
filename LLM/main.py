@@ -737,6 +737,58 @@ class AnswerGenerator:
         
         return "\n\n".join(context_items)
 
+class DashboardSummarizer:
+    """대시보드 데이터 요약 서비스"""
+
+    def __init__(self, llm_client: anthropic.Anthropic):
+        self.llm_client = llm_client
+
+    def generate_summary(self, dashboard_data: Dict[str, Any]) -> Dict[str, Any]:
+        """차트/테이블 데이터를 받아 요약문 생성"""
+        print("⏳ 5. 대시보드 데이터 요약 생성 중...")
+
+        # 토큰 절약을 위한 JSON 문자열 변환
+        data_str = json.dumps(dashboard_data, ensure_ascii=False)
+
+        system_prompt = """
+        당신은 데이터 기반의 의사결정을 지원하는 수석 데이터 분석가입니다.
+        제공된 차트 및 테이블 데이터를 바탕으로 웹 대시보드 상단에 표시될 
+        '핵심 요약 리포트'를 작성하세요.
+
+        [작성 지침]
+        1. 단순 수치 나열보다는 트렌드, 최빈값, 비율 등 '의미'를 해석하여 서술하세요.
+        2. "~했습니다", "~높습니다" 등의 정중한 해요/하십시오체를 사용하세요.
+        3. 핵심만 추려 3~4문장(한 문단)으로 간결하게 작성하세요.
+        4. 마크다운(볼드, 헤더 등) 없이 순수 텍스트(Plain Text)로만 답하세요.
+        """
+
+        user_message = f"다음 데이터를 분석하여 요약해 주세요:\n{data_str}"
+
+        try:
+            # 기존에 설정된 Config.LLM_MODEL 사용
+            message = self.llm_client.messages.create(
+                model=Config.LLM_MODEL,
+                max_tokens=Config.ANALYSIS_MAX_TOKENS, 
+                temperature=0.5,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_message}]
+            )
+            
+            summary_text = message.content[0].text
+            print(f"   - 요약 완료: {summary_text[:30]}...")
+            
+            return {
+                "status": "success",
+                "summary": summary_text
+            }
+
+        except Exception as e:
+            print(f"   ❌ 요약 생성 실패: {e}")
+            return {
+                "status": "error",
+                "summary": "데이터 요약 정보를 불러오는 데 실패했습니다.",
+                "error_detail": str(e)
+            }
 
 # ============================================================================
 # Main Application
@@ -752,6 +804,7 @@ class RAGService:
             engine_manager.collection
         )
         self.answer_generator = AnswerGenerator(engine_manager.llm_client)
+        self.summarizer = DashboardSummarizer(engine_manager.llm_client)
     
     def search(self, user_query: str) -> SearchResponse:
         """하이브리드 검색 실행"""
@@ -782,7 +835,10 @@ class RAGService:
             source_documents=docs,
             source_metadata=transformed_metadatas
         )
-
+    
+    # [추가됨] 요약 메서드
+    def summarize_dashboard(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        return self.summarizer.generate_summary(data)
 
 # ============================================================================
 # FastAPI Application
@@ -812,6 +868,16 @@ def hybrid_search(search_query: SearchQuery):
         print(f"❌ 검색 중 오류 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/summary")
+def generate_dashboard_summary(data: Dict[str, Any]):
+    """
+    프론트엔드 차트 데이터를 받아 요약문을 반환하는 엔드포인트
+    """
+    try:
+        return rag_service.summarize_dashboard(data)
+    except Exception as e:
+        print(f"❌ 요약 중 오류 발생: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
 # Server Entry Point
