@@ -5,7 +5,6 @@ const reportController = {
     handleGetReport: async (req, res, next) => {
         try {
             const body = req.body;
-
             const result = await reportService.getReportData(body);
             return res.success({
                 code: 200,

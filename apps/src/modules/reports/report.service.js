@@ -19,11 +19,13 @@ const reportService = {
             console.log("tableforms:", tablesforms);
             
             // 3. Promise.all로 그래프, 테이블, 요약 데이터를 동시 처리
-            const [graphData, tableData, summaryData] = await Promise.all([
+            const [graphData, tableData] = await Promise.all([
                 metadataToGraph(graphforms, metadataList), 
                 metadataToTable(tablesforms, metadataList, ids), 
-                metadataToSummary(summeryforms, metadataList)
             ]);
+            console.log("그래프 데이터:", graphData);
+            console.log("테이블 데이터:", tableData);
+            const summaryData = await metadataToSummary(summeryforms, graphData, tableData);
 
             return {
                 graphs: graphData,
