@@ -894,7 +894,7 @@ class RAGService:
         except Exception as e:
             summary_text = f"집단 B({req.caseB})의 인원은 {count_b}명입니다."
 
-        # 3. [수정] idsB 추가하여 반환
+        # 3. idsB 추가하여 반환
         return {
             "caseA": req.caseA,
             "caseB": req.caseB,
