@@ -1020,7 +1020,7 @@ def compare_samples(request: CompareRequest):
         print(f"❌ 비교 분석 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/summary/compare")
+@app.post("/summary-compare")
 def summarize_comparison(request: ComparisonRequest):
     """
     [심층 비교 요약]
