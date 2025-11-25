@@ -856,27 +856,31 @@ class RAGService:
         """
         print(f"\n--- 비교 분석 요청: '{req.caseA}'({req.countA}명) vs '{req.caseB}' ---")
 
-        # 1. 집단 B 검색 (전체)
+        # 1. 집단 B 쿼리 분석 (여기서 '10명' 같은 limit 정보가 추출됨)
         analysis_b = self.query_analyzer.analyze(req.caseB)
         
-        # limit="all"로 검색
+        # [변경 포인트] "all"로 고정하지 않고, 분석된 limit 값("all" 또는 숫자)을 사용
+        limit_b = analysis_b.get("limit", "all")
+        print(f"   -> 집단 B 검색 제한(Limit): {limit_b}")
+
+        # 2. 벡터 검색 실행
         _, _, ids_b = self.vector_searcher.search(
             analysis_b["semantic_query"],
             analysis_b["filters"],
-            limit="all"
+            limit=limit_b  # <--- 분석된 limit 적용
         )
         
-        # [수정] 개수만 세는 게 아니라 ID 리스트 자체를 확보
+        # 3. ID 리스트 및 개수 확보
         if ids_b and len(ids_b) > 0:
-            id_list_b = ids_b  # 리스트 추출
+            id_list_b = ids_b  # 리스트 자체를 가져옴
             count_b = len(id_list_b)
         else:
             id_list_b = []
-            count_b = 0 
+            count_b = 0
             
         print(f"   -> 집단 B 검색 결과: {count_b}명")
 
-        # 2. LLM 비교 요약 생성
+        # 4. LLM 비교 요약 생성
         summary_prompt = f"""
         [데이터]
         - 집단 A ({req.caseA}): {req.countA}명
@@ -898,7 +902,7 @@ class RAGService:
         except Exception as e:
             summary_text = f"집단 B({req.caseB})의 인원은 {count_b}명입니다."
 
-        # 3. idsB 추가하여 반환
+        # 5. 결과 반환
         return {
             "caseA": req.caseA,
             "caseB": req.caseB,
