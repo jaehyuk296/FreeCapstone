@@ -55,6 +55,34 @@ export const panelProvider = {
       throw new Error(error.response?.data?.detail || 'FastAPI 서버 요약 호출 실패.'); 
     }
   },
+  /**
+   * FastAPI 서버에 비교 데이터를 전송하고 결과를 반환합니다.
+   * @param {object} compareData - 비교할 데이터 객체
+   * @returns {Promise<object>} - FastAPI가 반환한 비교 결과 데이터
+   */
+  postCompareData: async (compareData) => {
+    try {
+      const response = await fastApiAxios.post('/compare', compareData);
+      return response.data;
+    } catch (error) {
+      console.error('[Provider Error] postCompareData 실패:', error.message);
+      throw new Error('FastAPI 서버에 비교 데이터를 전송하는 데 실패했습니다.');
+    }
+  },
+  /**
+   * FastAPI 서버에 비교 요약 데이터를 전송하고 요약 결과를 반환합니다.
+   * @param {object} dataToSummarize - 비교 요약할 데이터 객체
+   * @returns {Promise<string>} - FastAPI가 반환한 비교 요약 텍스트
+   */
+  postCompareSummaryData: async (dataToSummarize) => {  
+    try {
+      const response = await fastApiAxios.post('/summary-compare', dataToSummarize);
+      return response.data; 
+    } catch (error) {
+      console.error('[Provider Error] postCompareSummaryData 실패:', error.message);
+      throw new Error(error.response?.data?.detail || 'FastAPI 서버 비교 요약 호출 실패.'); 
+    }
+  },
 
   /**
    * (예시) FastAPI에 데이터를 POST로 전송하는 메서드

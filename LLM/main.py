@@ -807,6 +807,7 @@ class RAGService:
     """RAG 서비스 통합 클래스"""
     
     def __init__(self, engine_manager: EngineManager):
+        self.llm_client = engine_manager.llm_client
         self.query_analyzer = QueryAnalyzer(engine_manager.llm_client)
         self.vector_searcher = VectorSearcher(
             engine_manager.embedding_model,
