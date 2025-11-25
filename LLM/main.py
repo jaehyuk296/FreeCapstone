@@ -980,8 +980,6 @@ except Exception as e:
     print(f"❌ 엔진 로드 중 치명적 오류 발생: {e}")
     exit()
 
-summarizer_service = DashboardSummarizer(engine_manager.llm_client)
-
 # FastAPI 앱 생성
 app = FastAPI()
 
@@ -1028,7 +1026,7 @@ def summarize_comparison(request: ComparisonRequest):
     LLM이 분석한 비교 리포트를 반환합니다.
     """
     try:
-        return summarizer_service.generate_comparison_summary(request)
+        return rag_service.generate_comparison_summary(request)
     except Exception as e:
         print(f"❌ 비교 분석 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
