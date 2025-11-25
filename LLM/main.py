@@ -848,21 +848,28 @@ class RAGService:
     # [추가됨] 비교 분석 메서드
     def compare_with_summary(self, req: CompareRequest) -> Dict[str, Any]:
         """
-        A(입력값) vs B(검색값) 비교 후, 전체 데이터와 요약을 반환
+        A(입력값) vs B(검색값) 비교 후, 요약 및 ID 리스트 반환
         """
         print(f"\n--- 비교 분석 요청: '{req.caseA}'({req.countA}명) vs '{req.caseB}' ---")
 
-        # 1. 집단 B 검색 및 카운트
+        # 1. 집단 B 검색 (전체)
         analysis_b = self.query_analyzer.analyze(req.caseB)
         
-        # limit="all"로 전체 개수 파악
+        # limit="all"로 검색
         _, _, ids_b = self.vector_searcher.search(
             analysis_b["semantic_query"],
             analysis_b["filters"],
             limit="all"
         )
-        count_b = len(ids_b[0]) if ids_b else 0
         
+        # [수정] 개수만 세는 게 아니라 ID 리스트 자체를 확보
+        if ids_b and len(ids_b) > 0:
+            id_list_b = ids_b  # 리스트 추출
+            count_b = len(id_list_b)
+        else:
+            id_list_b = []
+            count_b = 0 
+            
         print(f"   -> 집단 B 검색 결과: {count_b}명")
 
         # 2. LLM 비교 요약 생성
@@ -873,11 +880,10 @@ class RAGService:
 
         [지시]
         두 집단의 표본 수를 비교하는 1~2줄의 핵심 요약을 작성하세요.
-        누가 더 많은지, 비율은 어떤지 등을 정중한 해요체로 설명하세요.
+        정중한 해요체로 작성하세요.
         """
 
         try:
-            # 요약 생성 (토큰 절약을 위해 max_tokens 제한)
             message = self.query_analyzer.llm_client.messages.create(
                 model=Config.LLM_MODEL,
                 max_tokens=200,
@@ -886,16 +892,16 @@ class RAGService:
             )
             summary_text = message.content[0].text
         except Exception as e:
-            print(f"   ⚠️ 요약 생성 실패: {e}")
             summary_text = f"집단 B({req.caseB})의 인원은 {count_b}명입니다."
 
-        # 3. [요청하신 포맷] 모든 정보를 포함하여 반환
+        # 3. [수정] idsB 추가하여 반환
         return {
             "caseA": req.caseA,
-            "caseB": req.caseB,     
-            "countA": req.countA,    
-            "countB": count_b,       
-            "summary": summary_text  
+            "caseB": req.caseB,
+            "countA": req.countA,
+            "countB": count_b,
+            "idsB": id_list_b,
+            "summary": summary_text
         }
     
 # ============================================================================
@@ -942,7 +948,7 @@ def compare_samples(request: CompareRequest):
     """
     Input: { "caseA": "...", "caseB": "...", "countA": 50 }
     Output: { "status": "success", "countB": 30, "summary": "A가 B보다..." }
-    """
+    """   
     try:
         return rag_service.compare_with_summary(request)
     except Exception as e:
