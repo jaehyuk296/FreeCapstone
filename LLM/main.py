@@ -321,6 +321,10 @@ class CompareRequest(BaseModel):
     caseB: str    # 서브질의
     countA: int  # 메인질의 인원
 
+class ComparisonRequest(BaseModel): # 비교 요청 모델
+    caseA: Dict[str, Any]
+    caseB: Dict[str, Any]
+
 # ============================================================================
 # Core Services
 # ============================================================================
@@ -904,6 +908,65 @@ class RAGService:
             "summary": summary_text
         }
     
+    def generate_comparison_summary(self, req_data: ComparisonRequest) -> Dict[str, str]:
+        """
+        Case A와 Case B의 그래프 데이터를 받아 비교 요약 생성
+        """
+        # A와 B의 질의문 추출 (로깅용)
+        query_a = req_data.caseA.get("mainQuery", "질의A")
+        query_b = req_data.caseB.get("subQuery", "질의B")
+        
+        print(f"⏳ 심층 비교 분석 중... '{query_a}' vs '{query_b}'")
+
+        # 1. 데이터를 프롬프트에 넣기 좋게 JSON 문자열로 변환
+        # (한글 깨짐 방지를 위해 ensure_ascii=False)
+        input_json = json.dumps({
+            "caseA": req_data.caseA,
+            "caseB": req_data.caseB
+        }, ensure_ascii=False)
+
+        system_prompt = """
+        당신은 데이터 비교 분석 전문가입니다.
+        제공된 JSON 데이터는 두 집단(Case A, Case B)의 질의 내용과 그래프 데이터(graphData)입니다.
+
+        [지시사항]
+        1. 'graphData' 안의 수치나 항목을 분석하여 두 집단 간의 **가장 두드러진 차이점**을 찾아내세요.
+        2. "A집단(질의내용)은 ~인 반면, B집단(질의내용)은 ~입니다." 와 같은 비교 대조 문체를 사용하세요.
+        3. 단순 수치 나열은 지양하고, **경향성이나 패턴** 위주로 해석하세요.
+        4. 정중한 '해요체'를 사용하여 **2~3문장** 내외로 요약하세요.
+        """
+
+        user_message = f"""
+        다음 두 집단의 데이터를 비교 분석해 주세요:
+        
+        {input_json}
+        """
+
+        try:
+            # LLM 호출
+            message = self.llm_client.messages.create(
+                model=Config.LLM_MODEL,
+                max_tokens=300, # 비교 설명이므로 약간 넉넉하게
+                temperature=0.5,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_message}]
+            )
+            
+            summary_text = message.content[0].text
+            print(f"   -> 비교 요약 완료: {summary_text[:30]}...")
+            
+            return {
+                "status": "success",
+                "summary": summary_text
+            }
+
+        except Exception as e:
+            print(f"   ❌ 비교 요약 생성 실패: {e}")
+            return {
+                "status": "error",
+                "summary": "두 집단의 데이터를 비교 분석하는 데 실패했습니다."
+            }
+    
 # ============================================================================
 # FastAPI Application
 # ============================================================================
@@ -916,6 +979,8 @@ try:
 except Exception as e:
     print(f"❌ 엔진 로드 중 치명적 오류 발생: {e}")
     exit()
+
+summarizer_service = DashboardSummarizer(engine_manager.llm_client)
 
 # FastAPI 앱 생성
 app = FastAPI()
@@ -951,6 +1016,19 @@ def compare_samples(request: CompareRequest):
     """   
     try:
         return rag_service.compare_with_summary(request)
+    except Exception as e:
+        print(f"❌ 비교 분석 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/summary/compare")
+def summarize_comparison(request: ComparisonRequest):
+    """
+    [심층 비교 요약]
+    Case A와 Case B의 전체 데이터(쿼리+그래프)를 받아
+    LLM이 분석한 비교 리포트를 반환합니다.
+    """
+    try:
+        return summarizer_service.generate_comparison_summary(request)
     except Exception as e:
         print(f"❌ 비교 분석 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
