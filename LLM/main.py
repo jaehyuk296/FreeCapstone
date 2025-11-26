@@ -155,7 +155,11 @@ def create_query_analysis_prompt() -> str:
 3.  '나이' 필터는 항상 $gte(이상), $lt(미만) 2개로 분리하여 '$and' 리스트에 포함시키세요.
 4.  '지역_시도'나 '직업' 등 여러 값이 '$in'으로 묶일 수 있습니다.
 5.  "고소득자", "저소득자", "젊은 층" 같은 추상적인 개념은 [메타데이터 스키마]를 참고하여 적절한 $gte, $lt, $in 필터로 변환하세요.
-    - "젊은 층": '나이' 20대~30대 ({{"$gte": 20}}, {{"$lt": 40}})
+    - "젊은 층", "MZ세대": '나이' 20대~30대 ({{"$gte": 20}}, {{"$lt": 40}})
+    - "중년", "중장년": '나이' 40대~50대 ({{"$gte": 40}}, {{"$lt": 60}})
+    - "노년층", "어르신", "실버세대", "늙은 사람": '나이' 60대 이상 ({{"$gte": 60}})
+    - "만족도가 높은": semantic_query에 "매우 만족함" 또는 "만족함" 키워드 추가
+    - "불만이 있는": semantic_query에 "불만족" 또는 "보통" 키워드 추가
     - "고소득자": '월평균_개인소득' (예: {{"월평균_개인소득": {{"$in": ["월 600~699만원", "월 700~799만원", "월 800~899만원", "월 900~999만원", "월 1,000만원 이상"]}}}})
 6.  필터 조건이 2개 이상일 때만 ChromaDB의 '$and' 연산자 리스트로 묶으세요.
 7.  필터 조건이 1개일 경우, '$and' 없이 딕셔너리만 사용하세요. (예: {{"직업": "사무직"}})
@@ -195,16 +199,23 @@ def create_query_analysis_prompt() -> str:
 }}
 
 [예시 3: 필터만]
-입력: "40대 남성"
+입력: "노년층 남성"
 출력: {{
     "filters": {{
         "$and": [
-            {{"나이": {{"$gte": 40}}}},
-            {{"나이": {{"$lt": 50}}}},
+            {{"나이": {{"$gte": 60}}}},
             {{"성별": "남성"}}
         ]
     }},
-    "semantic_query": "40대 남성",
+    "semantic_query": "노년층 남성",
+    "limit": "all"
+}}
+
+[예시 4: 의미만]
+입력: "환경 보호에 관심 있는 사람"
+출력: {{
+    "filters": null,
+    "semantic_query": "환경 보호에 관심 있는 사람",
     "limit": "all"
 }}
 
@@ -282,6 +293,20 @@ def create_query_analysis_prompt() -> str:
     "limit": "all"
 }}
 
+[예시 11: 하이브리드 (필터 + 의미 + 개수)]
+입력: "피부 만족도가 높은 20대 여성 10명"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"나이": {{"$gte": 20}}}},
+            {{"나이": {{"$lt": 30}}}},
+            {{"성별": "여성"}}
+        ]
+    }},
+    "semantic_query": "피부 상태에 매우 만족하거나 만족하는 사람",
+    "limit": 10
+}}
+
 """
 
 def create_answer_generation_prompt(
@@ -336,6 +361,7 @@ class EngineManager:
         self.llm_client: Optional[anthropic.Anthropic] = None
         self.embedding_model: Optional[SentenceTransformer] = None
         self.collection: Optional[Any] = None
+        self.raw_data_map = {} # 원본 데이터를 저장할 딕셔너리
     
     def initialize(self) -> None:
         """엔진 초기화"""
@@ -358,7 +384,24 @@ class EngineManager:
         self._initialize_chromadb(base_dir)
         
         print("✅ 모든 엔진 로드 완료")
-    
+        # [추가] 원본 데이터(JSON) 로드
+        print("⏳ 원본 데이터(Raw Data) 로드 중...")
+        try:
+            # 파일 경로는 실제 프로젝트 환경에 맞게 수정하세요
+            with open("merged_panel_data.json", "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+                
+            # 검색 속도를 위해 { "고유번호": {데이터} } 형태의 딕셔너리로 변환
+            for item in raw_data:
+                if "고유번호" in item:
+                    self.raw_data_map[str(item["고유번호"])] = item
+            
+            print(f"✅ 원본 데이터 {len(self.raw_data_map)}건 메모리 적재 완료.")
+            
+        except Exception as e:
+            print(f"⚠️ 원본 데이터 로드 실패: {e}")
+            print("   (이 경우 답변 생성 시 요약문(Chunk)을 대신 사용합니다.)")
+
     def _initialize_llm(self) -> None:
         """LLM 클라이언트 초기화"""
         api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -680,28 +723,27 @@ class AnswerGenerator:
         self,
         user_query: str,
         docs: List[str],
-        metadatas: List[Dict]
+        metadatas: List[Dict],
+        raw_data_map: Dict[str, Any]  # [추가] 원본 데이터 맵을 인자로 받음
     ) -> str:
-        """LLM으로 최종 답변 생성"""
+        """LLM으로 최종 답변 생성 (원본 데이터 기반)"""
         print("⏳ 4. LLM으로 최종 답변 생성 중 (Sonnet)...")
         
         if not docs:
-            answer = "해당 조건에 맞는 사용자를 찾지 못했습니다."
-            print(f"   - 최종 답변: {answer}")
-            return answer
+            return "해당 조건에 맞는 사용자를 찾지 못했습니다."
         
         try:
-            # 컨텍스트 준비
-            context_str = self._prepare_context(docs, metadatas)
+            # [수정] 원본 데이터를 사용하여 컨텍스트 구성
+            context_str = self._prepare_context(metadatas, raw_data_map, docs)
             
-            # 프롬프트 생성
+            # 프롬프트 생성 (발견된 문서 개수 전달)
             prompt = create_answer_generation_prompt(
                 user_query,
                 len(docs),
                 context_str
             )
             
-            # LLM 호출
+            # LLM 호출 (기존과 동일)
             message = self.llm_client.messages.create(
                 model=Config.LLM_MODEL,
                 max_tokens=Config.ANSWER_MAX_TOKENS,
@@ -718,31 +760,35 @@ class AnswerGenerator:
             return f"답변 생성 중 오류 발생: {e}"
     
     def _prepare_context(
-        self,
-        docs: List[str],
-        metadatas: List[Dict]
+        self, 
+        metadatas: List[Dict], 
+        raw_data_map: Dict[str, Any],
+        backup_docs: List[str] # 원본 없을 때 쓸 요약문
     ) -> str:
-        """컨텍스트 문자열 준비"""
-        # 너무 많은 경우 제한
-        if len(docs) > Config.MAX_CONTEXT_ITEMS:
-            print(
-                f"   ⚠️ 검색 결과({len(docs)}개)가 너무 많아 "
-                f"{Config.MAX_CONTEXT_ITEMS}개만 요약에 사용합니다."
-            )
-            docs = docs[:Config.MAX_CONTEXT_ITEMS]
-            metadatas = metadatas[:Config.MAX_CONTEXT_ITEMS]
-        
+        """
+        메타데이터의 ID를 이용해 원본 JSON을 찾아 컨텍스트로 만듦
+        """
         context_items = []
-        for i in range(len(docs)):
-            user_id = metadatas[i].get('고유번호', 'ID정보없음')
-            meta_text = json.dumps(metadatas[i], ensure_ascii=False)
+        
+        # 너무 많은 데이터는 토큰 초과를 유발하므로 제한
+        limit = min(len(metadatas), Config.MAX_CONTEXT_ITEMS)
+        
+        for i in range(limit):
+            # 1. 고유번호 추출
+            user_id = str(metadatas[i].get('고유번호', ''))
             
-            context_items.append(
-                f"문서 {i+1}:\n"
-                f"- 고유번호: {user_id}\n"
-                f"- 요약문: {docs[i]}\n"
-                f"- 메타데이터: {meta_text}"
-            )
+            # 2. 원본 데이터 맵에서 조회
+            if user_id in raw_data_map:
+                # [핵심] 원본 JSON 전체를 가져옴
+                raw_item = raw_data_map[user_id]
+                # JSON을 문자열로 예쁘게 변환 (한글 깨짐 방지)
+                item_str = json.dumps(raw_item, ensure_ascii=False)
+                content = f"[원본 데이터]\n{item_str}"
+            else:
+                # 원본이 없으면 기존 요약문(backup_docs) 사용
+                content = f"[요약 데이터]\n{backup_docs[i]}"
+            
+            context_items.append(f"문서 {i+1}:\n- 고유번호: {user_id}\n{content}")
         
         return "\n\n".join(context_items)
 
@@ -815,6 +861,9 @@ class RAGService:
         )
         self.answer_generator = AnswerGenerator(engine_manager.llm_client)
         self.summarizer = DashboardSummarizer(engine_manager.llm_client)
+        
+        # [NEW] 엔진 매니저에서 로드된 원본 데이터를 가져옴
+        self.raw_data_map = engine_manager.raw_data_map
     
     def search(self, user_query: str) -> SearchResponse:
         """하이브리드 검색 실행"""
@@ -833,11 +882,12 @@ class RAGService:
         # 3. 메타데이터 변환
         transformed_metadatas = MetadataTransformer.transform(metadatas, ids)
         
-        # 4. 답변 생성
+        # 4. 답변 생성 (여기서 원본 데이터 맵을 전달!)
         answer = self.answer_generator.generate(
             user_query,
             docs,
-            transformed_metadatas
+            transformed_metadatas,
+            self.raw_data_map  # [NEW] 원본 데이터 전달
         )
         
         return SearchResponse(
@@ -845,7 +895,6 @@ class RAGService:
             source_documents=docs,
             source_metadata=transformed_metadatas
         )
-    
     # [추가됨] 요약 메서드
     def summarize_dashboard(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return self.summarizer.generate_summary(data)
