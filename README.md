@@ -27,6 +27,8 @@ Thoth는 사용자의 자연어 질문을 이해하고, 직관적인 패널(Pane
 
 - **Glob & OS**: 분산된 JSON 파일의 자동 탐색 및 통합 파이프라인 구축
 
+## Run
+
 #### Installation
 
 ```bash
@@ -106,21 +108,20 @@ FreeCapstone/
 
 ## Key Features
 ### Automated Data Pipeline
->
-> **Welcome Data Processing**: 복잡한 엑셀 설문 코드를 "결혼여부", "직업", "소득" 등 의미 있는 텍스트로 자동 매핑 및 전처리합니다.
->
-> **Dynamic Merging**: merge_json_files.py를 통해 여러 폴더에 흩어진 전처리 파일들을 고유번호 기준으로 하나의 마스터 데이터셋으로 자동 통합합니다.
+- **Welcome Data Processing**: 복잡한 엑셀 설문 코드를 "결혼여부", "직업", "소득" 등 의미 있는 텍스트로 자동 매핑 및 전처리합니다.
+
+- **Dynamic Merging**: merge_json_files.py를 통해 여러 폴더에 흩어진 전처리 파일들을 고유번호 기준으로 하나의 마스터 데이터셋으로 자동 통합합니다.
 
 ### RAG (Retrieval-Augmented Generation)
-> **Hybrid Search**: 사용자의 질문을 분석하여 메타데이터 필터(나이, 성별 등)와 의미적 쿼리(관심사 등)를 결합한 정밀 검색을 수행합니다.
->
-> **Persona Summarization**: Claude 모델을 활용하여 방대한 설문 데이터를 자연스러운 페르소나 요약 문장으로 변환합니다.
+- **Hybrid Search**: 사용자의 질문을 분석하여 메타데이터 필터(나이, 성별 등)와 의미적 쿼리(관심사 등)를 결합한 정밀 검색을 수행합니다.
+
+- **Persona Summarization**: Claude 모델을 활용하여 방대한 설문 데이터를 자연스러운 페르소나 요약 문장으로 변환합니다.
 
 ### Advanced Analysis & Reliability
-> **Comparison Analysis**: 두 집단 간의 특성을 비교 분석하고 시각화 데이터 요약을 제공합니다.
+- **Comparison Analysis**: 두 집단 간의 특성을 비교 분석하고 시각화 데이터 요약을 제공합니다.
 
 ## Environment Variables
-> .env 파일에 다음과 같은 API 키 및 DB 설정이 필요합니다.
+- .env 파일에 다음과 같은 API 키 및 DB 설정이 필요합니다.
 
 
 ## AI API Keys
