@@ -33,23 +33,23 @@
 # 📁 Directory Structure
 ```
 >FreeCapstone/<br>
-├── 📱 apps/                         # 웹 애플리케이션 프론트엔드/서비스 소스 코드<br>
-├── 📁 json_extraction/              # 전처리 및 통합된 JSON 데이터 저장소<br>
-│   ├── welcome_data/                # Welcome 설문 전처리 결과 (1st, 2nd)<br>
-│   ├── qpoll_data/                  # QPoll 설문 월별 전처리 결과<br>
-│   └── master_data.json             # 전체 통합 마스터 데이터셋<br>
-├── 🧠 LLM/                         # 핵심 RAG 서비스 및 모델 연동 로직<br>
-│   ├── panel_vector_db/             # ChromaDB 벡터 데이터 저장소<br>
-│   ├── main.py                      # FastAPI 서버 및 RAG 엔진 통합<br>
-│   ├── embed_data.py                # KURE-v1 모델 기반 임베딩 및 DB 적재<br>
-│   ├── generate_sentences.py        # Claude 모델 기반 페르소나 문장 생성<br>
-│   ├── evaluate.py                  # 시스템 정확도(Precision/Recall) 평가<br>
-│   └── retry_failed_generations.py  # 실패한 LLM 생성 작업 재시도<br>
-├── 🛠 panel_extraction/             # 엑셀 원천 데이터 전처리 스크립트<br>
-│   ├── welcome_data/                # Welcome 데이터 가공 로직<br>
-│   └── qpoll_data/                  # 분산된 JSON 파일 병합 및 관리 (Jan~Jul)<br>
-├── 📊 paneldata/                    # 원천 설문 데이터 (Excel) 보관소<br>
-└── 📑 requirements.txt              # 프로젝트 의존성 라이브러리 목록<br>
+├── 📱 apps/                         # 웹 애플리케이션 프론트엔드/서비스 소스 코드
+├── 📁 json_extraction/              # 전처리 및 통합된 JSON 데이터 저장소
+│   ├── welcome_data/                # Welcome 설문 전처리 결과 (1st, 2nd)
+│   ├── qpoll_data/                  # QPoll 설문 월별 전처리 결과
+│   └── master_data.json             # 전체 통합 마스터 데이터셋
+├── 🧠 LLM/                         # 핵심 RAG 서비스 및 모델 연동 로직
+│   ├── panel_vector_db/             # ChromaDB 벡터 데이터 저장소
+│   ├── main.py                      # FastAPI 서버 및 RAG 엔진 통합
+│   ├── embed_data.py                # KURE-v1 모델 기반 임베딩 및 DB 적재
+│   ├── generate_sentences.py        # Claude 모델 기반 페르소나 문장 생성
+│   ├── evaluate.py                  # 시스템 정확도(Precision/Recall) 평가
+│   └── retry_failed_generations.py  # 실패한 LLM 생성 작업 재시도
+├── 🛠 panel_extraction/             # 엑셀 원천 데이터 전처리 스크립트
+│   ├── welcome_data/                # Welcome 데이터 가공 로직
+│   └── qpoll_data/                  # 분산된 JSON 파일 병합 및 관리 
+├── 📊 paneldata/                    # 원천 설문 데이터 (Excel) 보관소
+└── 📑 requirements.txt              # 프로젝트 의존성 라이브러리 목록
 ```
 <hr>
 
@@ -66,8 +66,6 @@ Persona Summarization: Claude 모델을 활용하여 방대한 설문 데이터�
 
 3️⃣ Advanced Analysis & Reliability
 Comparison Analysis: 두 집단 간의 특성을 비교 분석하고 시각화 데이터 요약을 제공합니다.
-
-System Evaluation: 정답셋과 비교하여 검색 시스템의 정확도(Precision) 및 **재현율(Recall)**을 수치로 측정합니다.
 
 <hr>
 
