@@ -1,0 +1,23 @@
+# Python 가상환경 폴더 (필수!)
+# 운영체제에 따라 이름이 다를 수 있으니 모두 적어두는 것이 좋습니다.
+.venv/
+venv/
+*.env
+env/
+env.bak/
+ENV/git 
+ENV.bak/
+__pycache__/    
+LLM/merged_panel_data.json
+LLM/sample_100_data.json
+LLM/generated_sentences.json
+LLM/generated_sentences_ALL_v2.json
+
+# 개인정보 및 민감한 정보가 담긴 파일
+paneldata/
+json_extraction/
+panel_vector_db/
+
+# node js 관련
+node_modules/
+.DS_Store

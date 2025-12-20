@@ -1,58 +1,143 @@
-# FreeCapstone
-패널 추출하는 단계까지 프로그램 만들기
+# Thoth Backend
+Thoth는 사용자의 자연어 질문을 이해하고, 직관적인 패널(Panel) UI를 통해 최적의 검색 결과를 시각화하여 제공하는 웹 애플리케이션입니다.
+<br>
 
-## 가상환경
-. venv/Scripts/activate
+## Tech Stack
+### Languages & Frameworks
+- **Python 3.11+**: 시스템 백엔드 및 데이터 분석 메인 언어
 
-# '패널 추출' 완성을 위한 4단계 핵심 과제
-## 1단계: 데이터 정제 및 표준화 ⚙️
-목표: 원본 엑셀 데이터를 AI와 데이터베이스가 이해할 수 있는 깨끗한 형태로 만듭니다.
+- **FastAPI**: 고성능 비동기 API 서버 구축
 
-To-Do:
+- **React + Vite**: 빠르고 현대적인 사용자 인터페이스(UI) 개발
 
-Python Pandas 라이브러리를 사용해 원본 엑셀 파일을 불러옵니다.
+### AI & LLM Models
+- **Anthropic Claude 4.5 Sonnet**: 페르소나 문장 생성 및 고도의 질의 분석 수행
 
-결측치(비어있는 값) 처리: 비어있는 데이터를 어떻게 처리할지 규칙을 정합니다 (예: '무응답'으로 채우기, 특정 값으로 대체하기).
+- **nlpai-lab/KURE-v1**: 한국어 문맥 이해에 최적화된 SentenceTransformer 임베딩 모델
 
-데이터 타입 통일: '나이'는 숫자(int)로, '성별'은 정해진 문자열('남성', '여성')로 바꾸는 등 데이터 형식을 일관성 있게 맞춥니다.
+- **LangChain**: LLM과 데이터(Pandas, Vector DB) 간의 효율적인 체인 구성 및 에이전트 활용
 
-이상치(잘못된 값) 제거: '나이'가 200살로 되어있는 등 잘못 입력된 데이터를 찾아내어 수정하거나 제거합니다.
+### Database Management
+- **ChromaDB (Vector Store)**: 패널 페르소나 임베딩 데이터의 고속 유사도 검색
 
-산출물: 깨끗하게 정제된 데이터프레임(DataFrame) 또는 CSV 파일.
+- **PostgreSQL + pgvector**: 패널의 원천 메타데이터 및 상세 속성 관리 (RDBMS)
 
-## 2단계: 데이터 증강 (AI 투입) ✨
-목표: 정제된 데이터에 LLM을 이용하여 '의미'를 부여하고, 검색 품질을 높일 수 있는 새로운 정보를 추가합니다.
+### Data Engineering
+- **Pandas & NumPy**: 대규모 설문 엑셀 데이터 전처리 및 통계 분석
 
-To-Do:
+- **Glob & OS**: 분산된 JSON 파일의 자동 탐색 및 통합 파이프라인 구축
 
-1단계에서 정제된 각 사용자(row)의 데이터를 읽어옵니다.
+## Run
 
-LLM (Sonnet)을 호출하여, 각 사용자의 특징을 나타내는 **'프로필 요약 문장'**과 검색용 **'해시태그'**를 생성하는 자동화 스크립트를 작성합니다.
+#### Installation
 
-산출물: 기존 데이터에 profile_summary와 hashtags 컬럼이 추가된 데이터.
+```bash
+git clone https://github.com/hansung-sw-capstone-2025-2/2025_8_H_BE.git
+```
 
-## 3. 하이브리드 데이터베이스 구축 💾
-목표: 증강된 데이터를 최종 목적지인 PostgreSQL 데이터베이스에 저장합니다.
+#### install dependencies
+```
+pip install -r requirements.txt
+```
 
-To-Do:
+#### Pre-run Checklist
+- 서버 실행 전 다음 데이터들이 준비되어 있어야 정상적인 검색이 가능합니다.
 
-PostgreSQL에 최종 테이블 스키마를 생성합니다. 이때, pgvector 확장을 설치하고 임베딩을 저장할 vector 타입의 컬럼을 반드시 포함해야 합니다.
+- Vector DB 존재 여부: LLM/panel_vector_db 폴더에 임베딩 데이터가 적재되어 있어야 합니다.
 
-임베딩 생성: 2단계에서 만든 '프로필 요약 문장'을 KORE-v1 모델로 벡터화합니다.
+- Raw Data 파일: LLM/merged_panel_data.json 파일이 존재해야 답변 생성 시 원본 메타데이터를 참조할 수 있습니다.
 
-데이터 적재: Python 스크립트(psycopg2 라이브러리 사용)를 이용해 사용자 정보, 해시태그, 그리고 생성된 벡터까지 모든 데이터를 PostgreSQL 테이블에 INSERT 합니다.
+- API Key 유효성: Anthropic API 키가 유효해야 Claude 모델을 통한 쿼리 분석 및 답변 생성이 가능합니다.
 
-산출물: 관계형 데이터와 벡터 데이터가 모두 저장된 완성된 PostgreSQL 데이터베이스.
+#### Run Dev Server
+서버 실행 명령어:
+```
+cd 2025_8_H_BE
+(윈도우) source venv/Scripts/activate
+(맥) source venv/bin/activate
 
-## 4. 기본 검색 인터페이스(API) 개발 🔍
-목표: 구축된 데이터베이스에서 실제로 패널을 추출할 수 있는 통로를 만듭니다.
+# LLM 디렉터리로 이동 후 실행
+cd LLM
+python main.py
+uvicorn main:app --reload http://127.0.0.1:8000/docs
+```
 
-To-Do:
 
-Python 서버(FastAPI/Flask)에 API 엔드포인트(e.g., /search)를 생성합니다.
+## Project Structure
 
-키워드/해시태그 기반 검색 로직을 구현합니다. (예: region=서울, age_group=20s 조건으로 SQL WHERE 절을 동적으로 생성)
+```
+FreeCapstone/
+├── apps/                            # 웹 애플리케이션 프론트엔드/서비스 소스 코드
+├── json_extraction/                 # 전처리 및 통합된 JSON 데이터 저장소
+│   ├── welcome_data/                # Welcome 설문 전처리 결과 (1st, 2nd)
+│   ├── qpoll_data/                  # QPoll 설문 월별 전처리 결과
+│   └── master_data.json             # 전체 통합 마스터 데이터셋
+├── LLM/                             # 핵심 RAG 서비스 및 모델 연동 로직
+│   ├── panel_vector_db/             # ChromaDB 벡터 데이터 저장소
+│   ├── main.py                      # FastAPI 서버 및 RAG 엔진 통합
+│   ├── embed_data.py                # KURE-v1 모델 기반 임베딩 및 DB 적재
+│   ├── generate_sentences.py        # Claude 모델 기반 페르소나 문장 생성
+│   ├── evaluate.py                  # 시스템 정확도(Precision/Recall) 평가
+│   └── retry_failed_generations.py  # 실패한 LLM 생성 작업 재시도
+├── panel_extraction/                # 엑셀 원천 데이터 전처리 스크립트
+│   ├── welcome_data/                # Welcome 데이터 가공 로직
+│   └── qpoll_data/                  # 분산된 JSON 파일 병합 및 관리 
+├── paneldata/                       # 원천 설문 데이터 (Excel) 보관소
+└── requirements.txt                 # 프로젝트 의존성 라이브러리 목록
+```
 
-유사도 검색 로직을 구현합니다. (사용자 질문을 임베딩하여, pgvector의 벡터 검색 기능 <=> 연산자 사용)
+## API Endpoints
 
-산출물: "서울 사는 20대" 같은 키워드 질문과 "스트레스 많은 사람" 같은 의미 질문에 대해, 해당하는 사용자 ID 목록(패널)을 반환하는 API.
+### Search & RAG
+- **POST /search**: 사용자의 자연어 질의를 분석하여 하이브리드 검색 결과와 답변을 반환합니다.
+
+- **Request**: {"query": "운동을 좋아하는 30대 남성"}
+
+- **Logic**: 쿼리 분석(Claude) → 벡터 검색(ChromaDB) → 원본 데이터 매핑 → 최종 답변 생성
+
+### Analysis & Summary
+- **POST /summary**: 대시보드의 차트 및 테이블 데이터를 분석하여 인사이트 요약을 생성합니다.
+
+- **POST /compare** 두 집단(Case A, Case B) 간의 인원수 차이를 비교하고 요약 리포트를 제공합니다.
+
+- **POST /summary-compare**: 두 집단의 그래프 데이터를 심층 비교 분석하여 텍스트 리포트를 생성합니다.
+
+### System Utility
+- **GET /docs**: Swagger UI를 통해 모든 API 명세와 테스트 환경을 제공합니다.
+
+
+## Key Features
+### Automated Data Pipeline
+- **Welcome Data Processing**: 복잡한 엑셀 설문 코드를 "결혼여부", "직업", "소득" 등 의미 있는 텍스트로 자동 매핑 및 전처리합니다.
+
+- **Dynamic Merging**: merge_json_files.py를 통해 여러 폴더에 흩어진 전처리 파일들을 고유번호 기준으로 하나의 마스터 데이터셋으로 자동 통합합니다.
+
+### RAG (Retrieval-Augmented Generation)
+- **Hybrid Search**: 사용자의 질문을 분석하여 메타데이터 필터(나이, 성별 등)와 의미적 쿼리(관심사 등)를 결합한 정밀 검색을 수행합니다.
+
+- **Persona Summarization**: Claude 모델을 활용하여 방대한 설문 데이터를 자연스러운 페르소나 요약 문장으로 변환합니다.
+
+### Advanced Analysis & Reliability
+- **Comparison Analysis**: 두 집단 간의 특성을 비교 분석하고 시각화 데이터 요약을 제공합니다.
+
+## Environment Variables
+- .env 파일에 다음과 같은 API 키 및 DB 설정이 필요합니다.
+
+
+## AI API Keys
+```
+ANTHROPIC_API_KEY=sk-ant-api03-xxx
+OPENAI_API_KEY=your_openai_api_key
+```
+
+## Database Settings
+```
+DB_HOST=localhost
+DB_PORT=your_port
+DB_NAME=your_DB
+DB_USER=postgres
+DB_PASSWORD=your_password
+```
+
+## License
+이 프로젝트는 한성대학교 기업연계 SW캡스톤디자인 수업에서 진행되었습니다.
