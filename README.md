@@ -20,7 +20,7 @@ Thoth는 사용자의 자연어 질문을 이해하고, 직관적인 패널(Pane
 ### Database Management
 - **ChromaDB (Vector Store)**: 패널 페르소나 임베딩 데이터의 고속 유사도 검색
 
-- **PostgreSQL**: 패널의 원천 메타데이터 및 상세 속성 관리 (RDBMS)
+- **PostgreSQL + pgvector**: 패널의 원천 메타데이터 및 상세 속성 관리 (RDBMS)
 
 ### Data Engineering
 - **Pandas & NumPy**: 대규모 설문 엑셀 데이터 전처리 및 통계 분석
