@@ -60,7 +60,7 @@ METADATA_FILTER_SCHEMA = """
 - '혼밥_여부': 혼밥 여부 (1.0 = 혼밥함, 0.0 = 혼밥 안 함)
 - 'AI_사용여부': AI 서비스 사용 여부 (예: '사용함', '사용 안 함')
 - '빠른배송_이용여부': 빠른 배송 서비스 이용 여부 (예: '이용함')
-- '반려동물_경험유무': 반려동물 양육 경험 유무 (1.0 = 경험 있음)
+- '반려동물_경험유무': 반려동물 양육 경험 유무 (1.0     = 경험 있음)
 - '이사_스트레스_여부': 이사 시 스트레스 여부 (1.0 = 스트레스 받음)
 - '설 선호선물있음': 설에 선호하는 선물 유무 (예: '있다')
 - '초콜릿_섭취_여부': 초콜릿 섭취 여부 (1.0 = 섭취함)
@@ -68,6 +68,12 @@ METADATA_FILTER_SCHEMA = """
 - '혼밥_여부': 혼밥 여부 (1.0 = 혼밥함)
 - '최애간식_있음': 여름철 최애 간식 유무 (1.0 = 있음)
 - '해외여행_희망여부': 해외여행 희망 여부 (예: '희망함')
+- '피부만족도_요약': 현재 피부 상태 만족도 (예: '보통이다', '불만족한다')
+- 'AI_사용여부': AI 서비스 사용 여부 (예: '사용함', '사용 안 함')
+- '혼밥_빈도': 혼자 식사하는 빈도 (예: '주 2~3회 정도', '거의 하지 않음')
+- '주요_사용_챗봇': 주로 사용하는 AI 챗봇 (예: 'ChatGPT', '사용해본 경험 없음')
+- '소비성향': 본인의 소비 성향 (예: '미니멀리스트')
+- '스킨케어_한달_소비금액': '3만원 미만', '5만원 이상 ~ 10만원 미만' 등
 """
 
 METADATA_SEMANTIC_SCHEMA = """
@@ -90,7 +96,6 @@ METADATA_SEMANTIC_SCHEMA = """
 - '카테고리': 선호하는 운동
 - '방문빈도': 전통시장 방문 빈도 (예: '주1회 이상')
 - '선호선물': 선호하는 선물 종류
-- '여행스타일': 본인의 여행 스타일
 - '노력_유형_요약': 환경 보호를 위한 노력 유형 요약
 - '친환경_노력_여부': 일회용품 줄이기 노력 여부 (예: '노력함')
 - '포인트_신경쓰는_정도': 포인트/적립금 신경쓰는 정도 (예: '매우 꼼꼼하게 챙긴다')
@@ -98,12 +103,11 @@ METADATA_SEMANTIC_SCHEMA = """
 - '보호_습관_요약': 개인정보 보호 습관 요약 (예: '비밀번호 주기적 변경', '2단계 인증 사용')
 - '여름패션필수템_요약': 여름철 패션 필수 아이템 요약 (예: '반팔티, 샌들')
 - '비올때_대처방법': 우산이 없을 때 비에 대처하는 방법
-- '주요_저장_사진': 휴대폰 갤러리에 가장 많은 사진 종류
+- '주요_저장_사진': 휴대폰 갤러리에 가장 많은 사진 종류 
 - '선호_물놀이_장소': 여름철 선호하는 물놀이 장소 (예: '계곡', '워터파크')
 - '여름철_걱정거리': 여름철 걱정거리 (예: '더위와 땀', '냉방병')
 - '처리방법_요약': 버리기 아까운 물건 처리 방법 (예: '중고로 판매')
 - '알람_방식': 아침 기상 시 알람 설정 방식
-- '혼밥_빈도': 혼자 식사하는 빈도 (예: '주 2~3회 정도', '거의 하지 않음')
 - '행복한_노년의_조건': 행복한 노년을 위해 중요하다고 생각하는 조건
 - '땀_불편함_요약': 여름철 땀으로 인한 불편함 요약
 - '효과적인_다이어트_방법': 효과적인 다이어트 방법
@@ -111,19 +115,15 @@ METADATA_SEMANTIC_SCHEMA = """
 - '여름철_최애_간식': 여름철 최애 간식 종류
 - '최대_지출처': 최근 가장 지출을 많이 한 곳 (예: '배달비')
 - 'AI_활용_분야_요약': AI를 활용하는 분야 요약
-- 'AI_사용여부': AI 서비스 사용 여부 (예: '사용함', '사용 안 함')
-- '소비성향': 본인의 소비 성향 (예: '미니멀리스트')
 - '스트레스_요인': 주요 스트레스 요인
 - '스트레스_해소법': 스트레스 해소 방법 (예: '수면', '명상/휴식')
-- '피부만족도_요약': 현재 피부 상태 만족도 (예: '보통이다', '불만족한다')
-- '스킨케어_한달_소비금액': 스킨케어 월 소비 금액
 - '구매_고려_요소': 스킨케어 제품 구매 시 고려 요소
-- '사용_경험_요약': AI 챗봇 사용 경험 요약
-- '주요_사용_챗봇': 주로 사용하는 AI 챗봇 (예: 'ChatGPT', '사용해본 경험 없음')
+- '사용_경험_요약': AI 챗 봇 사용 경험 요약
 - '활용_용도': AI 챗봇 활용 용도 (예: '개인 비서 (일정 관리, 메모)')
 - '선호_서비스': 선호하는 AI 챗봇
 - '희망_여행지_요약': 희망하는 여행지 유형 요약
 - '빠른배송_이용제품': 빠른 배송 서비스로 주로 이용하는 제품 유형
+- '여행스타일': '계획형 (꼼꼼히 준비)', '즉흥형' 등
 """
 
 BINARY_FIELD_MAPPING = {
@@ -147,25 +147,59 @@ def create_query_analysis_prompt() -> str:
 당신은 사용자의 자연어 쿼리를 분석하여 ChromaDB에서 사용할 수 있는 JSON 필터와 의미 검색어로 분리하는 '쿼리 분석 전문가'입니다.
 
 [규칙]
-1.  쿼리를 분석할 때, 아래 [필터링 가능한 메타데이터 스키마]를 참고하여 **'정확히 일치'**하는 조건만 'filters'로 추출하세요.
+1. 쿼리를 분석할 때, 아래 [필터링 가능한 메타데이터 스키마]를 참고하여 **'정확히 일치'**하는 조건만 'filters'로 추출하세요.
 {METADATA_FILTER_SCHEMA}
-2.  (★★★ 중요 ★★★) 쿼리에 [의미 검색으로 찾아야 할 메타데이터 스키마]에 해당하는 내용(예: '에쎄', '소주', '노트북')이 포함된 경우,
-    해당 내용은 'filters'로 만들지 말고, **반드시 'semantic_query' (의미 검색어)에 포함**시키세요.
-{METADATA_SEMANTIC_SCHEMA}
-3.  '나이' 필터는 항상 $gte(이상), $lt(미만) 2개로 분리하여 '$and' 리스트에 포함시키세요.
-4.  '지역_시도'나 '직업' 등 여러 값이 '$in'으로 묶일 수 있습니다.
-5.  "고소득자", "저소득자", "젊은 층" 같은 추상적인 개념은 [메타데이터 스키마]를 참고하여 적절한 $gte, $lt, $in 필터로 변환하세요.
-    - "젊은 층": '나이' 20대~30대 ({{"$gte": 20}}, {{"$lt": 40}})
-    - "고소득자": '월평균_개인소득' (예: {{"월평균_개인소득": {{"$in": ["월 600~699만원", "월 700~799만원", "월 800~899만원", "월 900~999만원", "월 1,000만원 이상"]}}}})
-6.  필터 조건이 2개 이상일 때만 ChromaDB의 '$and' 연산자 리스트로 묶으세요.
-7.  필터 조건이 1개일 경우, '$and' 없이 딕셔너리만 사용하세요. (예: {{"직업": "사무직"}})
-8.  만약 필터 조건이 없다면 "filters" 키의 값은 반드시 null 로 응답하세요.
-9.  사용자가 "30명", "10개" 등 명시적인 개수를 언급하면 "limit" 키로 해당 숫자를 추출하세요. "모두", "전체" 등을 언급하면 "limit"를 "all"로 설정하세요. 개수 언급이 없으면 "all"을 기본값으로 하세요.
-10.  'semantic_query'는 필터링 키워드를 제외한, 사용자의 모든 핵심 의도를 나타내는 문장으로 생성하세요. 만약 의미 검색어가 없다면 "semantic_query"는 원본 쿼리 텍스트를 그대로 사용하세요.
-11.  오직 JSON 객체 형식으로만 응답해야 합니다.
-12. [중요] 응답은 반드시 "{" 로 시작하고 "}" 로 끝나야 합니다. 어떤 설명이나 인사말도 JSON 앞뒤에 붙이지 마세요.
 
-[예시 1: 하이브리드 (필터 + 의미 + 개수)]
+2. (★★★ 중요 ★★★) 쿼리에 [의미 검색으로 찾아야 할 메타데이터 스키마]에 해당하는 내용(예: '에쎄', '소주', '노트북')이 포함된 경우,
+   해당 내용은 'filters'로 만들지 말고, **반드시 'semantic_query' (의미 검색어)에 포함**시키세요.
+{METADATA_SEMANTIC_SCHEMA}
+
+3. '나이' 필터는 항상 $gte(이상), $lt(미만) 2개로 분리하여 '$and' 리스트에 포함시키세요.
+4. '지역_시도'나 '직업' 등 여러 값이 '$in'으로 묶일 수 있습니다.
+
+5. (★ 개념 변환 및 구분 규칙 ★) 
+   추상적인 표현은 아래 규칙에 따라 구체적인 필터나 의미 검색어로 변환하세요.
+    [피부 만족도 (강력 필터링)]
+   - "피부 만족도가 높은", "피부 좋은": 
+     -> **filters에 {{"피부만족도_요약": {{"$in": ["매우 만족한다", "만족한다", "매우 만족함", "만족함"]}}}} 추가**
+   - "피부 불만족", "피부 안 좋은": 
+     -> filters에 {{"피부만족도_요약": {{"$in": ["매우 불만족한다", "불만족한다", "매우 불만족함", "불만족함"]}}}} 추가
+   - "피부 보통": 
+     -> filters에 {{"피부만족도_요약": "보통이다"}} 추가
+   [거주 vs 여행 구분]
+   - "해외 사는", "외국 사는", "유학 중인", "이민 간": 
+     -> **filters에 {{"지역_시도": "기타 / 해외"}} 조건을 반드시 추가하세요.** (띄어쓰기 주의)
+     -> semantic_query에도 "현재 해외 국가에 거주하고 있는 상태"라고 작성하세요.
+   
+   - "해외 여행 가고 싶은", "해외 여행 희망", "외국 가고 싶은": 
+     -> semantic_query에 "해외 여행을 희망하거나 계획 중인 상태"라고 작성.
+     -> '해외여행_희망여부' 필드가 있다면 filters에 추가.
+
+   [가구 형태 및 라이프스타일]
+   - "1인 가구", "혼자 사는", "자취생": '가족수' "1명"
+   - "운전자", "드라이브 즐기는", "자차 보유": '보유차량여부' "있다"
+   - "반려인", "집사": '반려동물_경험유무' 1.0
+
+   [연령대 매핑]
+   - "젊은 층", "MZ세대": '나이' 20대~30대 ({{"$gte": 20}}, {{"$lt": 40}})
+   - "중년", "중장년": '나이' 40대~50대 ({{"$gte": 40}}, {{"$lt": 60}})
+   - "노년층", "어르신", "실버세대": '나이' 60대 이상 ({{"$gte": 60}})
+
+   [소득 수준]
+   - "고소득자": '월평균_개인소득' 600만원 이상
+   - "저소득자": '월평균_개인소득' 200만원 미만
+
+   [상태 및 만족도]
+   - "만족도가 높은": semantic_query에 "매우 만족함" 또는 "만족함" 키워드 추가
+   - "불만이 있는": semantic_query에 "불만족" 또는 "보통" 키워드 추가
+
+6. 필터 조건이 2개 이상일 때만 '$and' 사용.
+7. 필터 조건이 없으면 "filters": null.
+8. 개수 언급 시 "limit" 설정, 없으면 "all".
+9. 'semantic_query'는 사용자 의도를 명확히 풀어쓴 문장이어야 합니다.
+10. 오직 JSON 객체만 응답하세요.
+
+[예시 1: 하이브리드]
 입력: "운동 좋아하고 OTT 보는 30대 남성 사무직 10명"
 출력: {{
     "filters": {{
@@ -195,16 +229,15 @@ def create_query_analysis_prompt() -> str:
 }}
 
 [예시 3: 필터만]
-입력: "40대 남성"
+입력: "노년층 남성"
 출력: {{
     "filters": {{
         "$and": [
-            {{"나이": {{"$gte": 40}}}},
-            {{"나이": {{"$lt": 50}}}},
+            {{"나이": {{"$gte": 60}}}},
             {{"성별": "남성"}}
         ]
     }},
-    "semantic_query": "40대 남성",
+    "semantic_query": "노년층 남성",
     "limit": "all"
 }}
 
@@ -232,7 +265,7 @@ def create_query_analysis_prompt() -> str:
     "limit": 5
 }}
 
-[예시 7]
+[예시 7: 복합 필터]
 입력: "아이폰 쓰는 50대 남성 10명"
 출력: {{
     "filters": {{   
@@ -247,7 +280,7 @@ def create_query_analysis_prompt() -> str:
     "limit": 10
 }}  
 
-[예시 8]
+[예시 8: 의미 검색]
 입력: "소주를 마셔본 경험이 있는 남성 5명"
 출력: {{
     "filters": {{"성별": "남성"}},
@@ -255,7 +288,7 @@ def create_query_analysis_prompt() -> str:
     "limit": 5
 }}
 
-[예시 9: (개념 매핑 + 의미 검색)]
+[예시 9: 개념 매핑]
 입력: "데스크톱을 가진 고소득자 남성"
 출력: {{
     "filters": {{
@@ -268,7 +301,7 @@ def create_query_analysis_prompt() -> str:
     "limit": "all"
 }}
 
-[예시 10: (복합 의미 검색)]
+[예시 10: 복합 의미]
 입력: "소주나 에쎄를 즐기는 20대 남성 모두"
 출력: {{
     "filters": {{
@@ -282,6 +315,73 @@ def create_query_analysis_prompt() -> str:
     "limit": "all"
 }}
 
+[예시 11: 만족도]
+입력: "피부 만족도가 높은 20대 여성 10명"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"나이": {{"$gte": 20}}}},
+            {{"나이": {{"$lt": 30}}}},
+            {{"성별": "여성"}}
+            {{"피부만족도_요약": {{"$in": ["매우 만족한다", "만족한다"]}}}}     
+        ]
+    }},
+    "semantic_query": "피부 상태에 매우 만족하거나 만족하는 사람",
+    "limit": 10
+}}
+
+[예시 12: 해외 거주자]
+입력: "해외에 사는 20대"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"나이": {{"$gte": 20}}}},
+            {{"나이": {{"$lt": 30}}}},
+            {{"지역_시도": "기타 / 해외"}}
+        ]
+    }},
+    "semantic_query": "현재 한국이 아닌 해외 국가에 거주하고 있는 사람",
+    "limit": "all"
+}}
+
+[예시 13: 1인 가구/자취생]
+입력: "서울 사는 20대 자취생"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"지역_시도": "서울"}},
+            {{"나이": {{"$gte": 20}}}},
+            {{"나이": {{"$lt": 30}}}},
+            {{"가족수": "1명"}}
+        ]
+    }},
+    "semantic_query": "서울에 거주하는 20대 1인 가구(자취생)",
+    "limit": "all"
+}}
+
+[예시 14: 차량 보유]
+입력: "드라이브를 즐기는 30대"
+출력: {{
+    "filters": {{
+        "$and": [
+            {{"나이": {{"$gte": 30}}}},
+            {{"나이": {{"$lt": 40}}}},
+            {{"보유차량여부": "있다"}}
+        ]
+    }},
+    "semantic_query": "드라이브를 즐기는 사람",
+    "limit": "all"
+}}
+
+[예시 15: 부정 논리 (반려동물 X)]
+입력: "반려동물 안 키우는 사람"
+출력: {{
+    "filters": {{
+        "반려동물_경험유무": 0.0
+    }},
+    "semantic_query": "반려동물을 현재 키우지 않는 사람",
+    "limit": "all"
+}}
 """
 
 def create_answer_generation_prompt(
@@ -336,6 +436,7 @@ class EngineManager:
         self.llm_client: Optional[anthropic.Anthropic] = None
         self.embedding_model: Optional[SentenceTransformer] = None
         self.collection: Optional[Any] = None
+        self.raw_data_map = {} # 원본 데이터를 저장할 딕셔너리
     
     def initialize(self) -> None:
         """엔진 초기화"""
@@ -358,7 +459,24 @@ class EngineManager:
         self._initialize_chromadb(base_dir)
         
         print("✅ 모든 엔진 로드 완료")
-    
+        # [추가] 원본 데이터(JSON) 로드
+        print("⏳ 원본 데이터(Raw Data) 로드 중...")
+        try:
+            # 파일 경로는 실제 프로젝트 환경에 맞게 수정하세요
+            with open("merged_panel_data.json", "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+                
+            # 검색 속도를 위해 { "고유번호": {데이터} } 형태의 딕셔너리로 변환
+            for item in raw_data:
+                if "고유번호" in item:
+                    self.raw_data_map[str(item["고유번호"])] = item
+            
+            print(f"✅ 원본 데이터 {len(self.raw_data_map)}건 메모리 적재 완료.")
+            
+        except Exception as e:
+            print(f"⚠️ 원본 데이터 로드 실패: {e}")
+            print("   (이 경우 답변 생성 시 요약문(Chunk)을 대신 사용합니다.)")
+
     def _initialize_llm(self) -> None:
         """LLM 클라이언트 초기화"""
         api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -680,28 +798,27 @@ class AnswerGenerator:
         self,
         user_query: str,
         docs: List[str],
-        metadatas: List[Dict]
+        metadatas: List[Dict],
+        raw_data_map: Dict[str, Any]  # [추가] 원본 데이터 맵을 인자로 받음
     ) -> str:
-        """LLM으로 최종 답변 생성"""
+        """LLM으로 최종 답변 생성 (원본 데이터 기반)"""
         print("⏳ 4. LLM으로 최종 답변 생성 중 (Sonnet)...")
         
         if not docs:
-            answer = "해당 조건에 맞는 사용자를 찾지 못했습니다."
-            print(f"   - 최종 답변: {answer}")
-            return answer
+            return "해당 조건에 맞는 사용자를 찾지 못했습니다."
         
         try:
-            # 컨텍스트 준비
-            context_str = self._prepare_context(docs, metadatas)
+            # [수정] 원본 데이터를 사용하여 컨텍스트 구성
+            context_str = self._prepare_context(metadatas, raw_data_map, docs)
             
-            # 프롬프트 생성
+            # 프롬프트 생성 (발견된 문서 개수 전달)
             prompt = create_answer_generation_prompt(
                 user_query,
                 len(docs),
                 context_str
             )
             
-            # LLM 호출
+            # LLM 호출 (기존과 동일)
             message = self.llm_client.messages.create(
                 model=Config.LLM_MODEL,
                 max_tokens=Config.ANSWER_MAX_TOKENS,
@@ -718,31 +835,35 @@ class AnswerGenerator:
             return f"답변 생성 중 오류 발생: {e}"
     
     def _prepare_context(
-        self,
-        docs: List[str],
-        metadatas: List[Dict]
+        self, 
+        metadatas: List[Dict], 
+        raw_data_map: Dict[str, Any],
+        backup_docs: List[str] # 원본 없을 때 쓸 요약문
     ) -> str:
-        """컨텍스트 문자열 준비"""
-        # 너무 많은 경우 제한
-        if len(docs) > Config.MAX_CONTEXT_ITEMS:
-            print(
-                f"   ⚠️ 검색 결과({len(docs)}개)가 너무 많아 "
-                f"{Config.MAX_CONTEXT_ITEMS}개만 요약에 사용합니다."
-            )
-            docs = docs[:Config.MAX_CONTEXT_ITEMS]
-            metadatas = metadatas[:Config.MAX_CONTEXT_ITEMS]
-        
+        """
+        메타데이터의 ID를 이용해 원본 JSON을 찾아 컨텍스트로 만듦
+        """
         context_items = []
-        for i in range(len(docs)):
-            user_id = metadatas[i].get('고유번호', 'ID정보없음')
-            meta_text = json.dumps(metadatas[i], ensure_ascii=False)
+        
+        # 너무 많은 데이터는 토큰 초과를 유발하므로 제한
+        limit = min(len(metadatas), Config.MAX_CONTEXT_ITEMS)
+        
+        for i in range(limit):
+            # 1. 고유번호 추출
+            user_id = str(metadatas[i].get('고유번호', ''))
             
-            context_items.append(
-                f"문서 {i+1}:\n"
-                f"- 고유번호: {user_id}\n"
-                f"- 요약문: {docs[i]}\n"
-                f"- 메타데이터: {meta_text}"
-            )
+            # 2. 원본 데이터 맵에서 조회
+            if user_id in raw_data_map:
+                # [핵심] 원본 JSON 전체를 가져옴
+                raw_item = raw_data_map[user_id]
+                # JSON을 문자열로 예쁘게 변환 (한글 깨짐 방지)
+                item_str = json.dumps(raw_item, ensure_ascii=False)
+                content = f"[원본 데이터]\n{item_str}"
+            else:
+                # 원본이 없으면 기존 요약문(backup_docs) 사용
+                content = f"[요약 데이터]\n{backup_docs[i]}"
+            
+            context_items.append(f"문서 {i+1}:\n- 고유번호: {user_id}\n{content}")
         
         return "\n\n".join(context_items)
 
@@ -815,6 +936,9 @@ class RAGService:
         )
         self.answer_generator = AnswerGenerator(engine_manager.llm_client)
         self.summarizer = DashboardSummarizer(engine_manager.llm_client)
+        
+        # [NEW] 엔진 매니저에서 로드된 원본 데이터를 가져옴
+        self.raw_data_map = engine_manager.raw_data_map
     
     def search(self, user_query: str) -> SearchResponse:
         """하이브리드 검색 실행"""
@@ -833,11 +957,12 @@ class RAGService:
         # 3. 메타데이터 변환
         transformed_metadatas = MetadataTransformer.transform(metadatas, ids)
         
-        # 4. 답변 생성
+        # 4. 답변 생성 (여기서 원본 데이터 맵을 전달!)
         answer = self.answer_generator.generate(
             user_query,
             docs,
-            transformed_metadatas
+            transformed_metadatas,
+            self.raw_data_map  # [NEW] 원본 데이터 전달
         )
         
         return SearchResponse(
@@ -845,7 +970,6 @@ class RAGService:
             source_documents=docs,
             source_metadata=transformed_metadatas
         )
-    
     # [추가됨] 요약 메서드
     def summarize_dashboard(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return self.summarizer.generate_summary(data)

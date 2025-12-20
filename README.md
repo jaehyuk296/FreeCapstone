@@ -1,114 +1,90 @@
-# FreeCapstone
-패널 추출하는 단계까지 프로그램 만들기
+## 🚀 FreeCapstone: Panel Data RAG & Analytics System
+>본 프로젝트는 대규모 패널 설문 데이터를 기반으로 데이터 전처리, 자연어 검색(RAG), 페르소나 생성, 그리고 데이터 분석을 수행하는 통합 시스템입니다. 복잡한 설문 응답을 LLM이 이해할 수 있는 형태로 정제하고, 이를 벡터 DB와 연동하여 최적의 인사이트를 도출합니다.
+<Hr>
 
-# 라이브러리 설치
-(윈도우)
-source venv/Scripts/activate
+## 🛠 Tech Stack
+>Languages & Frameworks: Python 3.x, FastAPI
+>
+>LLM Models: Anthropic Claude (claude-sonnet-4-5, claude-3-haiku)
+>
+>Embedding: nlpai-lab/KURE-v1 (SentenceTransformer)
+>
+>Database: ChromaDB (Vector Store), MySQL (Backup)
+>
+>Data Processing: Pandas, NumPy, Glob
 
-pip install python-dotenv
+<hr>
 
-python.exe -m pip install --upgrade pip setuptools wheel
+## 📁 Directory Structure
 
-pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0.58 langchain-anthropic==0.1.13 pandas numpy==1.26.4 tabulate python-dotenv
+>FreeCapstone/<br>
+├── 📱 apps/                  # 웹 애플리케이션 프론트엔드/서비스 소스 코드<br>
+├── 📁 json_extraction/       # 전처리 및 통합된 JSON 데이터 저장소<br>
+│   ├── welcome_data/         # Welcome 설문 전처리 결과 (1st, 2nd)<br>
+│   ├── qpoll_data/           # QPoll 설문 월별 전처리 결과<br>
+│   └── master_data.json      # 전체 통합 마스터 데이터셋<br>
+├── 🧠 LLM/                   # 핵심 RAG 서비스 및 모델 연동 로직<br>
+│   ├── panel_vector_db/      # ChromaDB 벡터 데이터 저장소<br>
+│   ├── main.py               # FastAPI 서버 및 RAG 엔진 통합<br>
+│   ├── embed_data.py         # KURE-v1 모델 기반 임베딩 및 DB 적재<br>
+│   ├── generate_sentences.py  # Claude 모델 기반 페르소나 문장 생성<br>
+│   ├── evaluate.py           # 시스템 정확도(Precision/Recall) 평가<br>
+│   └── retry_failed_generations.py # 실패한 LLM 생성 작업 재시도<br>
+├── 🛠 panel_extraction/       # 엑셀 원천 데이터 전처리 스크립트<br>
+│   ├── welcome_data/         # Welcome 데이터 가공 로직<br>
+│   └── qpoll_data/           # 분산된 JSON 파일 병합 및 관리 (Jan~Jul)<br>
+├── 📊 paneldata/             # 원천 설문 데이터 (Excel) 보관소<br>
+└── 📑 requirements.txt       # 프로젝트 의존성 라이브러리 목록<br>
+<hr>
 
+## 🔑 Key Features
+1️⃣ Automated Data Pipeline
+Welcome Data Processing: 복잡한 엑셀 설문 코드를 "결혼여부", "직업", "소득" 등 의미 있는 텍스트로 자동 매핑 및 전처리합니다.
 
-(맥)
-source venv/bin/activate
+Dynamic Merging: merge_json_files.py를 통해 여러 폴더에 흩어진 전처리 파일들을 고유번호 기준으로 하나의 마스터 데이터셋으로 자동 통합합니다.
 
-pip install python-dotenv
+2️⃣ RAG (Retrieval-Augmented Generation)
+Hybrid Search: 사용자의 질문을 분석하여 메타데이터 필터(나이, 성별 등)와 의미적 쿼리(관심사 등)를 결합한 정밀 검색을 수행합니다.
 
-python -m pip install --upgrade pip setuptools wheel
+Persona Summarization: Claude 모델을 활용하여 방대한 설문 데이터를 자연스러운 페르소나 요약 문장으로 변환합니다.
 
-pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0.58 langchain-anthropic==0.1.13 pandas numpy==1.26.4 tabulate python-dotenv
+3️⃣ Advanced Analysis & Reliability
+Comparison Analysis: 두 집단 간의 특성을 비교 분석하고 시각화 데이터 요약을 제공합니다.
 
+System Evaluation: 정답셋과 비교하여 검색 시스템의 정확도(Precision) 및 **재현율(Recall)**을 수치로 측정합니다.
 
-uvicorn main:app --reload
-http://127.0.0.1:8000/docs
+<hr>
 
-# 디렉터리
-Root : 
-FreeCapstone
+## 🔐 Environment Variables
+.env 파일에 다음과 같은 API 키 및 DB 설정이 필요합니다.
 
-ㄴ json_extraction (패널 추출한거 저장)
+---
 
-    ㄴ qpoll_data
+## AI API Keys
+ANTHROPIC_API_KEY=sk-ant-api03-xxx
+OPENAI_API_KEY=your_openai_api_key
 
-    ㄴ welcome1_data
+---
 
-    ㄴ welcome2_data
-ㄴ LLM
+## Database Settings
+DB_HOST=localhost
+DB_PORT=your_port
+DB_NAME=your_DB
+DB_USER=postgres
+DB_PASSWORD=your_password
+<hr>
 
-    ㄴ .env(api_key)
+## 🚀 Installation
 
-ㄴ panel_extraction (코드 작성)
+## 저장소 복제
+git clone https://github.com/hansung-sw-capstone-2025-2/2025_8_H_BE.git
 
-    ㄴ qpoll_data
+---
 
-        ㄴ 파이썬 코드
+## 폴더 이동
+cd 2025_8_H_BE
 
-    ㄴ welcome_data
+---
 
-        ㄴ 파이썬 코드
-
-ㄴ paneldata (데이터 저장 장소)
-
-    ㄴ Quickpoll
-
-        ㄴ 엑셀 데이터
-
-    ㄴ Welcome
-
-        ㄴ 엑셀 데이터
-
-# '패널 추출' 완성을 위한 4단계 핵심 과제
-## 1단계: 데이터 정제 및 표준화 ⚙️
-목표: 원본 엑셀 데이터를 AI와 데이터베이스가 이해할 수 있는 깨끗한 형태로 만듭니다.
-
-To-Do:
-
-Python Pandas 라이브러리를 사용해 원본 엑셀 파일을 불러옵니다.
-
-결측치(비어있는 값) 처리: 비어있는 데이터를 어떻게 처리할지 규칙을 정합니다 (예: '무응답'으로 채우기, 특정 값으로 대체하기).
-
-데이터 타입 통일: '나이'는 숫자(int)로, '성별'은 정해진 문자열('남성', '여성')로 바꾸는 등 데이터 형식을 일관성 있게 맞춥니다.
-
-이상치(잘못된 값) 제거: '나이'가 200살로 되어있는 등 잘못 입력된 데이터를 찾아내어 수정하거나 제거합니다.
-
-산출물: 깨끗하게 정제된 데이터프레임(DataFrame) 또는 CSV 파일.
-
-## 2단계: 데이터 증강 (AI 투입) ✨
-목표: 정제된 데이터에 LLM을 이용하여 '의미'를 부여하고, 검색 품질을 높일 수 있는 새로운 정보를 추가합니다.
-
-To-Do:
-
-1단계에서 정제된 각 사용자(row)의 데이터를 읽어옵니다.
-
-LLM (Sonnet)을 호출하여, 각 사용자의 특징을 나타내는 **'프로필 요약 문장'**과 검색용 **'해시태그'**를 생성하는 자동화 스크립트를 작성합니다.
-
-산출물: 기존 데이터에 profile_summary와 hashtags 컬럼이 추가된 데이터.
-
-## 3. 하이브리드 데이터베이스 구축 💾
-목표: 증강된 데이터를 최종 목적지인 PostgreSQL 데이터베이스에 저장합니다.
-
-To-Do:
-
-PostgreSQL에 최종 테이블 스키마를 생성합니다. 이때, pgvector 확장을 설치하고 임베딩을 저장할 vector 타입의 컬럼을 반드시 포함해야 합니다.
-
-임베딩 생성: 2단계에서 만든 '프로필 요약 문장'을 KURE-v1 모델로 벡터화합니다.
-
-데이터 적재: Python 스크립트(psycopg2 라이브러리 사용)를 이용해 사용자 정보, 해시태그, 그리고 생성된 벡터까지 모든 데이터를 PostgreSQL 테이블에 INSERT 합니다.
-
-산출물: 관계형 데이터와 벡터 데이터가 모두 저장된 완성된 PostgreSQL 데이터베이스.
-
-## 4. 기본 검색 인터페이스(API) 개발 🔍
-목표: 구축된 데이터베이스에서 실제로 패널을 추출할 수 있는 통로를 만듭니다.
-
-To-Do:
-
-Python 서버(FastAPI/Flask)에 API 엔드포인트(e.g., /search)를 생성합니다.
-
-키워드/해시태그 기반 검색 로직을 구현합니다. (예: region=서울, age_group=20s 조건으로 SQL WHERE 절을 동적으로 생성)
-
-유사도 검색 로직을 구현합니다. (사용자 질문을 임베딩하여, pgvector의 벡터 검색 기능 <=> 연산자 사용)
-
-산출물: "서울 사는 20대" 같은 키워드 질문과 "스트레스 많은 사람" 같은 의미 질문에 대해, 해당하는 사용자 ID 목록(패널)을 반환하는 API.
+## 의존성 설치
+>pip install -r requirements.txt
