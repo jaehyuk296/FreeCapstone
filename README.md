@@ -23,7 +23,10 @@ pip install langchain==0.1.20 langchain-core==0.1.52 langchain-experimental==0.0
 
 
 uvicorn main:app --reload
+python fastapi_panel_server.py
+
 http://127.0.0.1:8000/docs
+http://localhost:8000/docs
 
 # 디렉터리
 Root : 
