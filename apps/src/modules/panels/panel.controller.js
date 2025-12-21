@@ -20,7 +20,6 @@ const panelController = {
         }
     },
 
-  // ... 필요한 다른 비즈니스 로직 메서드들 ...
 };
 
 export default panelController;

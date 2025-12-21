@@ -35,7 +35,7 @@ const compareController = {
 export default compareController;
 /**
 {
-    "ids" : ["w197097899323955", "w220378379698204", "w334133319853441", "w406282073956743", "w336214924289966", "w166163835739477", "w462597089152910", "w435239591138513", "w230154355689561", "w311859837920360"],
+    "ids" : ["ids1", "ids2", "ids3", "ids4"],
     "content" : {
         "comparison" : {
             "type": "population",
