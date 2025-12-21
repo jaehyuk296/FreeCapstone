@@ -1,13 +1,8 @@
 // metadata.util.js
 
-/**
- * 나이를 숫자로 변환하고 연령대 문자열로 반환합니다.
- */
 function getAgeCategory(age) {
-  // String을 숫자로 안전하게 변환
   const numAge = parseInt(age); 
   
-  // 숫자가 아니거나 0일 경우 null 반환 (오류 처리)
   if (isNaN(numAge) || numAge === 0) return null; 
   
   // 연령대 분류
@@ -22,9 +17,6 @@ function getAgeCategory(age) {
   return null;
 }
 
-/**
- * ⭐️ 최종 TAG_CONFIG (공백 없음)
- */
 const TAG_CONFIG = {
     'gender':          { key: '성별', type: 'predefined', nodes: ["남성", "여성"] },
     'marriage':        { key: '결혼여부', type: 'predefined', nodes: ["미혼", "기혼", "기타(사별/이혼 등)"] },
@@ -38,16 +30,11 @@ const TAG_CONFIG = {
     'carBrand':        { key: '자동차제조사', type: 'dynamic' }
 };
 
-/**
- * ⭐️ 핵심: 키 불일치 및 공백 문제를 해결하며 안전하게 값을 가져오는 함수
- */
 const getSafeValue = (meta, expectedKey) => {
-    // meta 객체의 키를 모두 trim()하여 expectedKey와 비교합니다.
     const matchingKey = Object.keys(meta).find(key => key.trim() === expectedKey);
     
     if (!matchingKey) return null;
     
-    // 값을 가져와 다시 trim()하여 공백을 최종적으로 제거합니다.
     const rawValue = meta[matchingKey];
     return rawValue ? String(rawValue).trim() : null;
 };
